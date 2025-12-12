@@ -215,7 +215,7 @@ export default function ConfigureTelephonyPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-2">Configure Telephony</h1>
+        <h1 className="text-3xl font-bold text-gray-600 mb-2">Configure Telephony</h1>
         <p className="text-gray-600 mb-6">
           Set up your telephony provider to make phone calls
         </p>
@@ -237,16 +237,26 @@ export default function ConfigureTelephonyPage() {
                 <CardDescription>
                   {selectedProvider === "cloudonix" ? (
                     <>
-                      Cloudonix is a TwiML-compatible telephony provider. Visit{" "}
+                      Cloudonix is an AI Connectivity platform, enabling you to connect Dograh to any SIP product or SIP Telephony Provider.<br/><br/>
+                      Visit{" "}
+                      <a
+                        href="https://cloudonix.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline"
+                      >
+                        https://cloudonix.com
+                      </a>{" "}
+                      for more information about Cloudonix services and pricing.Visit{" "}
                       <a
                         href="https://developers.cloudonix.com"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-600 hover:underline"
                       >
-                        developers.cloudonix.com
+                        https://developers.cloudonix.com
                       </a>{" "}
-                      for documentation.
+                      for developer documentation and API reference.
                     </>
                   ) : selectedProvider === "vobiz" ? (
                     <>
@@ -299,13 +309,12 @@ export default function ConfigureTelephonyPage() {
                 ) : (
                   <div className="space-y-4 text-sm">
                     <div>
-                      <h4 className="font-semibold mb-2">Getting Started:</h4>
+                      <h4 className="font-semibold mb-2">Getting Started with Cloudonix:</h4>
                       <ol className="list-decimal list-inside space-y-1 text-gray-600">
-                        <li>Sign up for a Cloudonix account</li>
-                        <li>Create an API token in your Cloudonix dashboard</li>
-                        <li>Note your Domain ID</li>
-                        <li>Configure phone numbers (DNIDs) in Cloudonix</li>
-                        <li>Enter your credentials below</li>
+                        <li>Sign up for a Cloudonix account at https://cloudonix.com</li>
+                        <li>Create an <i>API token</i> for your Cloudonix domain</li>
+                        <li>Configure your Cloudoinx <i>API Token</i> and <i>Cloudonix Domain Name</i> in Dograh</li>
+                        <li>Configure an optional outbound phone number for your Dograh agent</li>
                       </ol>
                     </div>
                     <div className="bg-blue-50 border border-blue-200 rounded p-3">
@@ -574,7 +583,7 @@ export default function ConfigureTelephonyPage() {
                   {selectedProvider === "cloudonix" && (
                     <>
                       <div className="space-y-2">
-                        <Label htmlFor="bearer_token">Bearer Token</Label>
+                        <Label htmlFor="bearer_token">API Token</Label>
                         <Input
                           id="bearer_token"
                           type="password"
@@ -599,7 +608,7 @@ export default function ConfigureTelephonyPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="domain_id">Domain ID</Label>
+                        <Label htmlFor="domain_id">Cloudonix Domain Name or Domain UUID</Label>
                         <Input
                           id="domain_id"
                           placeholder="your-domain-id"
