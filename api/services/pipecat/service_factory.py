@@ -96,6 +96,7 @@ def create_tts_service(user_config, audio_config: "AudioConfig"):
             api_key=user_config.tts.api_key,
             model=user_config.tts.model.value,
             voice=user_config.tts.voice.value,
+            sample_rate=audio_config.pipeline_sample_rate,  # Set output sample rate for proper audio streaming
         )
     else:
         raise HTTPException(
