@@ -17,11 +17,9 @@ from pipecat.audio.filters.rnnoise_filter import RNNoiseFilter
 from pipecat.audio.mixers.silence_mixer import SilenceAudioMixer
 from pipecat.audio.mixers.soundfile_mixer import SoundfileMixer
 from pipecat.audio.turn.smart_turn.base_smart_turn import SmartTurnParams
-from pipecat.audio.turn.smart_turn.local_smart_turn_v3 import LocalSmartTurnAnalyzerV3
 from pipecat.audio.vad.silero import SileroVADAnalyzer, VADParams
 from pipecat.serializers.plivo import PlivoFrameSerializer
 from pipecat.serializers.twilio import TwilioFrameSerializer
-from pipecat.serializers.vobiz import VobizFrameSerializer
 from pipecat.serializers.vonage import VonageFrameSerializer
 from pipecat.transports.base_transport import TransportParams
 from pipecat.transports.smallwebrtc.connection import SmallWebRTCConnection
@@ -44,6 +42,8 @@ def create_turn_analyzer(workflow_run_id: int, audio_config: AudioConfig):
         audio_config: Audio configuration containing pipeline sample rate
     """
     if ENABLE_SMART_TURN:
+        # Import only when feature is enabled to avoid requiring heavy dependencies
+        from pipecat.audio.turn.smart_turn.local_smart_turn_v3 import LocalSmartTurnAnalyzerV3
         return LocalSmartTurnAnalyzerV3(params=SmartTurnParams())
 
     return None
@@ -257,20 +257,20 @@ async def create_vobiz_transport(
 
     turn_analyzer = create_turn_analyzer(workflow_run_id, audio_config)
 
-    # Use VobizFrameSerializer for Vobiz WebSocket protocol
-    serializer = VobizFrameSerializer(
+    # Use PlivoFrameSerializer for Vobiz WebSocket protocol (Plivo-compatible)
+    serializer = PlivoFrameSerializer(
         stream_id=stream_id,
         call_id=call_id,
         auth_id=auth_id,
         auth_token=auth_token,
-        params=VobizFrameSerializer.InputParams(
-            vobiz_sample_rate=8000,  # Vobiz uses MULAW at 8kHz
+        params=PlivoFrameSerializer.InputParams(
+            plivo_sample_rate=8000,  # Vobiz uses MULAW at 8kHz (Plivo-compatible)
             sample_rate=audio_config.pipeline_sample_rate,
         ),
     )
 
     logger.debug(
-        f"[run {workflow_run_id}] VobizFrameSerializer created for Vobiz - "
+        f"[run {workflow_run_id}] PlivoFrameSerializer created for Vobiz - "
         f"transport_rate=8000Hz, pipeline_rate={audio_config.pipeline_sample_rate}Hz"
     )
 
@@ -317,6 +317,127 @@ async def create_vobiz_transport(
 
     logger.info(
         f"[run {workflow_run_id}] Vobiz transport created successfully (VAD enabled)"
+    )
+    return transport
+
+
+async def create_cloudonix_transport(
+    websocket_client: WebSocket,
+    stream_sid: str,
+    call_sid: str,
+    workflow_run_id: int,
+    audio_config: AudioConfig,
+    organization_id: int,
+    vad_config: dict | None = None,
+    ambient_noise_config: dict | None = None,
+):
+    """Create a transport for Cloudonix connections.
+
+    Cloudonix uses TwiML-compatible WebSocket protocol:
+    - MULAW audio at 8kHz (same as Twilio)
+    - TwilioFrameSerializer handles the protocol
+    - Bearer token authentication (not account_sid/auth_token)
+    """
+    from loguru import logger
+
+    logger.info(
+        f"[run {workflow_run_id}] Creating Cloudonix transport - "
+        f"stream_sid={stream_sid}, call_sid={call_sid}, org_id={organization_id}"
+    )
+
+    # Load Cloudonix configuration from database
+    from api.services.telephony.factory import load_telephony_config
+
+    config = await load_telephony_config(organization_id)
+
+    logger.debug(
+        f"[run {workflow_run_id}] Loaded telephony config - "
+        f"provider={config.get('provider')}, "
+        f"has_bearer_token={bool(config.get('bearer_token'))}, "
+        f"domain_id={config.get('domain_id')}"
+    )
+
+    if config.get("provider") != "cloudonix":
+        error_msg = f"Expected Cloudonix provider, got {config.get('provider')}"
+        logger.error(f"[run {workflow_run_id}] {error_msg}")
+        raise ValueError(error_msg)
+
+    bearer_token = config.get("bearer_token")
+    domain_id = config.get("domain_id")
+
+    if not bearer_token or not domain_id:
+        error_msg = f"Incomplete Cloudonix configuration for organization {organization_id} - bearer_token={bool(bearer_token)}, domain_id={bool(domain_id)}"
+        logger.error(f"[run {workflow_run_id}] {error_msg}")
+        raise ValueError(error_msg)
+
+    logger.debug(
+        f"[run {workflow_run_id}] Cloudonix config validated - domain_id={domain_id}"
+    )
+
+    turn_analyzer = create_turn_analyzer(workflow_run_id, audio_config)
+
+    # Use TwilioFrameSerializer with auto_hang_up=False since Cloudonix uses different auth
+    # The WebSocket protocol is TwiML-compatible, but hangup API is different
+    serializer = TwilioFrameSerializer(
+        stream_sid=stream_sid,
+        call_sid=call_sid,
+        params=TwilioFrameSerializer.InputParams(
+            twilio_sample_rate=8000,  # Cloudonix uses MULAW at 8kHz
+            sample_rate=audio_config.pipeline_sample_rate,
+            auto_hang_up=False,  # Disable auto-hangup (Cloudonix uses bearer token auth)
+        ),
+    )
+
+    logger.debug(
+        f"[run {workflow_run_id}] TwilioFrameSerializer created for Cloudonix - "
+        f"transport_rate=8000Hz, pipeline_rate={audio_config.pipeline_sample_rate}Hz, "
+        f"auto_hang_up=False"
+    )
+
+    # Create WebSocket transport (same structure as Twilio/Vonage/Vobiz)
+    transport = FastAPIWebsocketTransport(
+        websocket=websocket_client,
+        params=FastAPIWebsocketParams(
+            audio_in_enabled=True,
+            audio_out_enabled=True,
+            audio_in_sample_rate=audio_config.transport_in_sample_rate,
+            audio_out_sample_rate=audio_config.transport_out_sample_rate,
+            vad_analyzer=(
+                SileroVADAnalyzer(
+                    params=VADParams(
+                        confidence=vad_config.get("confidence", 0.7),
+                        start_secs=vad_config.get("start_seconds", 0.4),
+                        stop_secs=vad_config.get("stop_seconds", 0.8),
+                        min_volume=vad_config.get("minimum_volume", 0.6),
+                    )
+                )
+                if vad_config
+                else None
+            ),
+            audio_in_mixer=(
+                SoundfileMixer(
+                    sound_files={
+                        "office": APP_ROOT_DIR
+                        / "assets"
+                        / f"office-ambience-{audio_config.transport_out_sample_rate}-mono.wav"
+                    },
+                    default_sound="office",
+                    volume=ambient_noise_config.get("volume", 0.3),
+                )
+                if ambient_noise_config and ambient_noise_config.get("enabled", False)
+                else SilenceAudioMixer()
+            ),
+            turn_analyzer=turn_analyzer,
+            serializer=serializer,
+            audio_in_filter=RNNoiseFilter(library_path=librnnoise_path)
+            if ENABLE_RNNOISE
+            else None,
+        ),
+    )
+
+    logger.info(
+        f"[run {workflow_run_id}] Cloudonix transport created successfully "
+        f"(VAD={'enabled' if vad_config else 'disabled'})"
     )
     return transport
 

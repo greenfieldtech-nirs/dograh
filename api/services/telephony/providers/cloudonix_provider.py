@@ -356,7 +356,7 @@ class CloudonixProvider(TelephonyProvider):
         2. "start" event with streamSid and callSid
         3. Then audio messages
         """
-        from api.services.pipecat.run_pipeline import run_pipeline_twilio
+        from api.services.pipecat.run_pipeline import run_pipeline_cloudonix
 
         try:
             # Wait for "connected" event
@@ -384,6 +384,8 @@ class CloudonixProvider(TelephonyProvider):
 
             # Extract Twilio-compatible identifiers
             try:
+                logger.info("Received streamSid" + start_msg["start"]["streamSid"])
+                logger.info("Received callSid" + start_msg["start"]["callSid"])
                 stream_sid = start_msg["start"]["streamSid"]
                 call_sid = start_msg["start"]["callSid"]
             except KeyError:
@@ -391,8 +393,8 @@ class CloudonixProvider(TelephonyProvider):
                 await websocket.close(code=4400, reason="Missing stream identifiers")
                 return
 
-            # Run the Twilio pipeline (Cloudonix is compatible)
-            await run_pipeline_twilio(
+            # Run the Cloudonix pipeline (TwiML-compatible WebSocket protocol)
+            await run_pipeline_cloudonix(
                 websocket, stream_sid, call_sid, workflow_id, workflow_run_id, user_id
             )
 

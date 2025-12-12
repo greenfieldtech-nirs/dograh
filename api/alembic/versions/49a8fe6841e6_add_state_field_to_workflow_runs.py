@@ -1,7 +1,7 @@
 """add_state_field_to_workflow_runs
 
 Revision ID: 49a8fe6841e6
-Revises: a188ff90e76f
+Revises: 2be183567909
 Create Date: 2025-12-10 17:34:31.232048
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 import sqlalchemy as sa
 
 revision: str = '49a8fe6841e6'
-down_revision: Union[str, None] = 'a188ff90e76f'
+down_revision: Union[str, None] = '2be183567909'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
