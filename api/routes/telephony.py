@@ -10,10 +10,11 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, WebSocket
 from loguru import logger
 from pydantic import BaseModel
+from sqlalchemy.future import select
 from starlette.responses import HTMLResponse
 
 from api.db import db_client
-from api.db.models import UserModel
+from api.db.models import UserModel, organization_users_association
 from api.enums import WorkflowRunState
 from api.services.auth.depends import get_user
 from api.services.campaign.call_dispatcher import campaign_call_dispatcher
@@ -30,6 +31,21 @@ class InitiateCallRequest(BaseModel):
     workflow_id: int
     workflow_run_id: int | None = None
     phone_number: str | None = None
+
+
+class RegisterCallRequest(BaseModel):
+    """Request model for registering an inbound call."""
+    workflow_id: int
+    from_number: str  # Caller's phone number
+    to_number: str    # Dialed phone number
+    provider: str     # Provider name: "cloudonix", "twilio", "vonage", "vobiz"
+    organization_id: int  # Organization ID that will handle the call
+
+
+class RegisterCallResponse(BaseModel):
+    """Response model for register-call endpoint."""
+    workflow_run_id: int
+    websocket_url: str
 
 
 class StatusCallbackRequest(BaseModel):
@@ -172,6 +188,119 @@ async def initiate_call(
     )
 
     return {"message": f"Call initiated successfully with run name {workflow_run_name}"}
+
+
+@router.post("/register-call")
+async def register_call(
+    request: RegisterCallRequest, user: UserModel = Depends(get_user)
+) -> RegisterCallResponse:
+    """
+    Register an inbound call and return WebSocket connection details.
+
+    This endpoint is used for inbound calls where an external telephony system
+    needs to connect to your workflow. It creates a workflow_run and returns
+    the WebSocket URL for audio streaming.
+    """
+
+    # Verify user has access to the specified organization
+    # Query the database directly to avoid SQLAlchemy DetachedInstanceError
+    async with db_client.async_session() as session:
+        result = await session.execute(
+            select(organization_users_association.c.organization_id)
+            .where(organization_users_association.c.user_id == user.id)
+        )
+        user_org_ids = [row[0] for row in result.fetchall()]
+
+    if request.organization_id not in user_org_ids:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Access denied: User does not have access to organization {request.organization_id}",
+        )
+
+    # Validate provider parameter
+    valid_providers = ["cloudonix", "twilio", "vonage", "vobiz"]
+    if request.provider not in valid_providers:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid provider: {request.provider}. Must be one of: {', '.join(valid_providers)}",
+        )
+
+    # Get the telephony provider for the organization
+    provider = await get_telephony_provider(request.organization_id)
+
+    # Verify provider matches the requested provider
+    if provider.PROVIDER_NAME != request.provider:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Provider mismatch: organization configured for {provider.PROVIDER_NAME}, but requested {request.provider}",
+        )
+
+    # Validate provider is configured
+    if not provider.validate_config():
+        raise HTTPException(
+            status_code=400,
+            detail="telephony_not_configured",
+        )
+
+    # Check Dograh quota before registering the call
+    quota_result = await check_dograh_quota(user)
+    if not quota_result.has_quota:
+        raise HTTPException(status_code=402, detail=quota_result.error_message)
+
+    # Create workflow_run for this inbound call
+    workflow_run_name = f"WR-IN-{random.randint(1000, 9999)}"
+    workflow_run = await db_client.create_workflow_run(
+        workflow_run_name,
+        request.workflow_id,
+        request.provider,  # Use the requested provider as mode
+        initial_context={
+            "from_number": request.from_number,
+            "to_number": request.to_number,
+        },
+        user_id=user.id,
+    )
+    workflow_run_id = workflow_run.id
+
+    logger.info(
+        f"Registered inbound call: workflow_run_id={workflow_run_id}, "
+        f"from={request.from_number}, to={request.to_number}, provider={request.provider}"
+    )
+
+    # Get backend endpoint for WebSocket URL
+    backend_endpoint = await TunnelURLProvider.get_tunnel_url()
+
+    # Construct WebSocket URL
+    websocket_url = (
+        f"wss://{backend_endpoint}/api/v1/telephony/ws"
+        f"/{request.workflow_id}/{user.id}/{workflow_run_id}"
+    )
+
+    # Store provider metadata in workflow run context
+    # This is required for the WebSocket endpoint to route correctly
+    gathered_context = {
+        "provider": request.provider,
+    }
+
+    # Add provider-specific metadata if available
+    from api.services.telephony.factory import load_telephony_config
+    config = await load_telephony_config(request.organization_id)
+
+    # For Cloudonix, include domain_id
+    if request.provider == "cloudonix" and config.get("domain_id"):
+        gathered_context["domain_id"] = config.get("domain_id")
+
+    await db_client.update_workflow_run(
+        run_id=workflow_run_id, gathered_context=gathered_context
+    )
+
+    logger.info(
+        f"Returning WebSocket URL for workflow_run {workflow_run_id}: {websocket_url}"
+    )
+
+    return RegisterCallResponse(
+        workflow_run_id=workflow_run_id,
+        websocket_url=websocket_url,
+    )
 
 
 @router.post("/twiml", include_in_schema=False)
