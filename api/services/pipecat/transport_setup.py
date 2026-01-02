@@ -69,7 +69,7 @@ async def create_twilio_transport(
         raise ValueError(
             f"Twilio credentials not configured for organization {organization_id}"
         )
-    print("telephony config is: ", config.value)
+
     account_sid = config.value.get("account_sid")
     auth_token = config.value.get("auth_token")
 

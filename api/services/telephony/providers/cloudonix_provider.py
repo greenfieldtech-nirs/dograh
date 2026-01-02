@@ -265,15 +265,17 @@ class CloudonixProvider(TelephonyProvider):
         self, url: str, params: Dict[str, Any], signature: str
     ) -> bool:
         """
-        Verify Cloudonix webhook signature for security.
+        Dummy implementation - Cloudonix doesn't use webhook signature verification.
 
-        Note: Cloudonix webhook signature verification method needs to be confirmed.
-        For now, we'll implement basic validation.
+        Cloudonix embeds CXML directly in the API call during initiate_call(),
+        so webhook endpoints are never called and signature verification is not needed.
+        This method only exists to satisfy the abstract base class requirement.
+        
+        Always returns True since no actual webhook verification is performed.
         """
-        # TODO: Implement proper signature verification once Cloudonix webhook
-        # signature algorithm is confirmed
         logger.warning(
-            "Cloudonix webhook signature verification not yet implemented - accepting all webhooks"
+            "verify_webhook_signature called for Cloudonix - this should not happen. "
+            "Cloudonix embeds CXML directly in API calls and doesn't use webhook callbacks."
         )
         return True
 

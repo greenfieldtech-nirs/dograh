@@ -278,7 +278,7 @@ async def run_pipeline_cloudonix(
         session_token = workflow_run.gathered_context.get("session_token")
         logger.debug(f"Retrieved session_token from workflow_run: {session_token}")
 
-    # Create audio configuration for Twilio
+    # Create audio configuration for Cloudonix
     audio_config = create_audio_config(WorkflowRunMode.CLOUDONIX.value)
 
     transport = await create_cloudonix_transport(
