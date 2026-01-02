@@ -238,9 +238,17 @@ export default function ConfigureTelephonyPage() {
                   {selectedProvider === "cloudonix" ? (
                     <>
                       Cloudonix is an AI Connectivity platform, enabling you to connect Dograh to any SIP product or SIP Telephony Provider.<br/><br/>
+                      <iframe
+                        style={{ border: 0 }}
+                        width="100%"
+                        height="450"
+                        src="https://www.youtube.com/embed/qLKX0F99jpU?si=a_sF9ijSJdV4OdG-"
+                        allowFullScreen
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      /><br/><br/>
                       Visit{" "}
                       <a
-                        href="https://cloudonix.com"
+                        href="https://cockpit.cloudonix.io/onboarding?affiliate=DOGRAH"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-600 hover:underline"
