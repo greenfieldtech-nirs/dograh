@@ -49,6 +49,8 @@ if ! dograh_is_ipv4 "$SERVER_IP"; then
     dograh_fail "Invalid IP address format"
 fi
 
+FORCE_TURN_RELAY="${FORCE_TURN_RELAY:-false}"
+
 # Get the TURN secret (skip prompt if TURN_SECRET is already set)
 if [[ -z "${TURN_SECRET:-}" ]]; then
     echo -e "${YELLOW}Enter a shared secret for the TURN server (press Enter to generate a random one):${NC}"
@@ -133,10 +135,10 @@ if [[ -z "$FASTAPI_WORKERS" ]]; then
     if [[ -t 0 ]]; then
         echo ""
         echo -e "${YELLOW}Number of FastAPI workers (uvicorn processes nginx will load-balance):${NC}"
-        read -p "[4]: " FASTAPI_WORKERS
-        FASTAPI_WORKERS="${FASTAPI_WORKERS:-4}"
+        read -p "[2]: " FASTAPI_WORKERS
+        FASTAPI_WORKERS="${FASTAPI_WORKERS:-2}"
     else
-        FASTAPI_WORKERS="4"
+        FASTAPI_WORKERS="2"
     fi
 fi
 
@@ -185,6 +187,7 @@ echo -e "${GREEN}Configuration:${NC}"
 echo -e "  Server IP:        ${BLUE}$SERVER_IP${NC}"
 echo -e "  TURN Secret:      ${BLUE}********${NC}"
 echo -e "  Deploy mode:      ${BLUE}$DEPLOY_MODE${NC}"
+echo -e "  Force TURN relay: ${BLUE}$FORCE_TURN_RELAY${NC}"
 echo -e "  FastAPI workers:  ${BLUE}$FASTAPI_WORKERS${NC}  (ports 8000..$((8000 + FASTAPI_WORKERS - 1)))"
 if [[ "$DEPLOY_MODE" == "build" ]]; then
     if [[ "${REPO_SOURCE:-}" == "clone" ]]; then
@@ -248,9 +251,13 @@ echo -e "${GREEN}✓ SSL certificates generated${NC}"
 
 echo -e "${BLUE}[4/$TOTAL] Creating environment file...${NC}"
 OSS_JWT_SECRET=$(openssl rand -hex 32)
+POSTGRES_PASSWORD=$(openssl rand -hex 32)
+REDIS_PASSWORD=$(openssl rand -hex 32)
+MINIO_ROOT_USER="dograh$(openssl rand -hex 6)"
+MINIO_ROOT_PASSWORD=$(openssl rand -hex 32)
 
 cat > .env << ENV_EOF
-# Change environment from local to production so that coturn filters local IPs
+# Remote deployments run with production signaling and HTTPS defaults
 ENVIRONMENT=production
 
 # Canonical public host/base URL for this install.
@@ -267,9 +274,26 @@ MINIO_PUBLIC_ENDPOINT=https://$SERVER_IP
 # TURN Server Configuration (time-limited credentials via TURN REST API)
 TURN_HOST=$SERVER_IP
 TURN_SECRET=$TURN_SECRET
+# Relay-only ICE candidates for explicit TURN diagnostics
+FORCE_TURN_RELAY=$FORCE_TURN_RELAY
 
 # JWT secret for OSS authentication
 OSS_JWT_SECRET=$OSS_JWT_SECRET
+
+# PostgreSQL password. Used by the postgres container on first init and by the
+# API's DATABASE_URL. Do not change after the first start — the password is
+# baked into the postgres data volume when it is first created.
+POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+
+# Redis password. Used by the redis container's --requirepass and the API's
+# REDIS_URL. Unlike postgres, this is not baked into a volume and can be
+# rotated by updating .env and recreating the redis container.
+REDIS_PASSWORD=$REDIS_PASSWORD
+
+# MinIO root credentials. Used by the MinIO container and the API's
+# MINIO_ACCESS_KEY / MINIO_SECRET_KEY.
+MINIO_ROOT_USER=$MINIO_ROOT_USER
+MINIO_ROOT_PASSWORD=$MINIO_ROOT_PASSWORD
 
 # Telemetry (set to false to disable)
 ENABLE_TELEMETRY=$ENABLE_TELEMETRY

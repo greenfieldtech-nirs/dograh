@@ -137,25 +137,43 @@ export type AriConfigurationResponse = {
 };
 
 /**
- * AccessTokenResponse
+ * AWS Bedrock
  */
-export type AccessTokenResponse = {
+export type AwsBedrockLlmConfiguration = {
     /**
-     * Access Token
+     * Provider
      */
-    access_token: string | null;
+    provider?: 'aws_bedrock';
     /**
-     * Refresh Token
+     * Api Key
+     *
+     * Not used for Bedrock — authentication is via the AWS credentials above. Leave blank.
      */
-    refresh_token: string | null;
+    api_key?: string | Array<string> | null;
     /**
-     * Expires At
+     * Model
+     *
+     * Bedrock model ID — include the region inference-profile prefix (e.g. 'us.').
      */
-    expires_at: string | null;
+    model?: string;
     /**
-     * Connection Id
+     * Aws Access Key
+     *
+     * AWS access key ID with bedrock:InvokeModel permission.
      */
-    connection_id: string;
+    aws_access_key?: string;
+    /**
+     * Aws Secret Key
+     *
+     * AWS secret access key paired with the access key ID.
+     */
+    aws_secret_key?: string;
+    /**
+     * Aws Region
+     *
+     * AWS region where the Bedrock model is available.
+     */
+    aws_region?: string;
 };
 
 /**
@@ -201,6 +219,46 @@ export type AmbientNoiseUploadResponse = {
 };
 
 /**
+ * AppendTextChatMessageRequest
+ */
+export type AppendTextChatMessageRequest = {
+    /**
+     * Text
+     */
+    text: string;
+    /**
+     * Expected Revision
+     */
+    expected_revision?: number | null;
+};
+
+/**
+ * AssemblyAI
+ */
+export type AssemblyAisttConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'assemblyai';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * AssemblyAI realtime STT model.
+     */
+    model?: string;
+    /**
+     * Language
+     *
+     * ISO 639-1 language code.
+     */
+    language?: string;
+};
+
+/**
  * AuthResponse
  */
 export type AuthResponse = {
@@ -223,6 +281,366 @@ export type AuthUserResponse = {
      * Is Superuser
      */
     is_superuser: boolean;
+};
+
+/**
+ * Azure OpenAI
+ */
+export type AzureLlmService = {
+    /**
+     * Provider
+     */
+    provider?: 'azure';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * Azure deployment name (not the upstream OpenAI model id).
+     */
+    model?: string;
+    /**
+     * Endpoint
+     *
+     * Azure OpenAI resource endpoint (e.g. https://<resource>.openai.azure.com).
+     */
+    endpoint: string;
+};
+
+/**
+ * Azure OpenAI
+ */
+export type AzureOpenAiEmbeddingsConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'azure';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * Azure OpenAI embedding deployment name. The deployment must return 1536-dimensional embeddings.
+     */
+    model?: string;
+    /**
+     * Endpoint
+     *
+     * Azure OpenAI resource endpoint (e.g. https://<resource>.openai.azure.com).
+     */
+    endpoint: string;
+    /**
+     * Api Version
+     *
+     * Azure OpenAI API version for embeddings.
+     */
+    api_version?: string;
+};
+
+/**
+ * Azure OpenAI Realtime
+ *
+ * Azure OpenAI Realtime API — low-latency speech-to-speech conversations.
+ */
+export type AzureRealtimeLlmConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'azure_realtime';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * Azure OpenAI realtime deployment name.
+     */
+    model?: string;
+    /**
+     * Endpoint
+     *
+     * Azure OpenAI resource endpoint (e.g. https://<resource>.openai.azure.com).
+     */
+    endpoint: string;
+    /**
+     * Voice
+     *
+     * Voice the model speaks in.
+     */
+    voice?: string;
+    /**
+     * Api Version
+     *
+     * Azure OpenAI API version.
+     */
+    api_version?: string;
+};
+
+/**
+ * Azure Speech Services
+ *
+ * Azure Cognitive Services Speech — TTS and STT via the Azure Speech SDK.
+ */
+export type AzureSpeechSttConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'azure_speech';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * Azure Speech recognition model (use 'latest_long' for continuous recognition).
+     */
+    model?: string;
+    /**
+     * Region
+     *
+     * Azure region for Speech Services (e.g. 'eastus', 'westeurope').
+     */
+    region?: string;
+    /**
+     * Language
+     *
+     * BCP-47 language code for recognition.
+     */
+    language?: string;
+};
+
+/**
+ * Azure Speech Services
+ *
+ * Azure Cognitive Services Speech — TTS and STT via the Azure Speech SDK.
+ */
+export type AzureSpeechTtsConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'azure_speech';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * Azure Speech synthesis engine (neural voices only).
+     */
+    model?: string;
+    /**
+     * Region
+     *
+     * Azure region for Speech Services (e.g. 'eastus', 'westeurope').
+     */
+    region?: string;
+    /**
+     * Voice
+     *
+     * Azure Neural voice name (e.g. 'en-US-AriaNeural').
+     */
+    voice?: string;
+    /**
+     * Language
+     *
+     * BCP-47 language code for synthesis.
+     */
+    language?: string;
+    /**
+     * Speed
+     *
+     * Speech speed multiplier (0.5 to 2.0).
+     */
+    speed?: number;
+};
+
+/**
+ * BYOKAIModelConfiguration
+ */
+export type ByokaiModelConfiguration = {
+    /**
+     * Mode
+     */
+    mode: 'pipeline' | 'realtime';
+    pipeline?: ByokPipelineAiModelConfiguration | null;
+    realtime?: ByokRealtimeAiModelConfiguration | null;
+};
+
+/**
+ * BYOKPipelineAIModelConfiguration
+ */
+export type ByokPipelineAiModelConfiguration = {
+    /**
+     * Llm
+     */
+    llm: ({
+        provider: 'openai';
+    } & OpenAillmService) | ({
+        provider: 'google_vertex';
+    } & GoogleVertexLlmConfiguration) | ({
+        provider: 'groq';
+    } & GroqLlmService) | ({
+        provider: 'openrouter';
+    } & OpenRouterLlmConfiguration) | ({
+        provider: 'google';
+    } & GoogleLlmService) | ({
+        provider: 'azure';
+    } & AzureLlmService) | ({
+        provider: 'dograh';
+    } & DograhLlmService) | ({
+        provider: 'aws_bedrock';
+    } & AwsBedrockLlmConfiguration) | ({
+        provider: 'speaches';
+    } & SpeachesLlmConfiguration) | ({
+        provider: 'huggingface';
+    } & HuggingFaceLlmConfiguration) | ({
+        provider: 'minimax';
+    } & MiniMaxLlmConfiguration) | ({
+        provider: 'sarvam';
+    } & SarvamLlmConfiguration);
+    /**
+     * Tts
+     */
+    tts: ({
+        provider: 'deepgram';
+    } & DeepgramTtsConfiguration) | ({
+        provider: 'google';
+    } & GoogleTtsConfiguration) | ({
+        provider: 'openai';
+    } & OpenAittsService) | ({
+        provider: 'elevenlabs';
+    } & ElevenlabsTtsConfiguration) | ({
+        provider: 'cartesia';
+    } & CartesiaTtsConfiguration) | ({
+        provider: 'inworld';
+    } & InworldTtsConfiguration) | ({
+        provider: 'dograh';
+    } & DograhTtsService) | ({
+        provider: 'sarvam';
+    } & SarvamTtsConfiguration) | ({
+        provider: 'camb';
+    } & CambTtsConfiguration) | ({
+        provider: 'rime';
+    } & RimeTtsConfiguration) | ({
+        provider: 'speaches';
+    } & SpeachesTtsConfiguration) | ({
+        provider: 'minimax';
+    } & MiniMaxTtsConfiguration) | ({
+        provider: 'azure_speech';
+    } & AzureSpeechTtsConfiguration) | ({
+        provider: 'smallest';
+    } & SmallestAittsConfiguration);
+    /**
+     * Stt
+     */
+    stt: ({
+        provider: 'deepgram';
+    } & DeepgramSttConfiguration) | ({
+        provider: 'cartesia';
+    } & CartesiaSttConfiguration) | ({
+        provider: 'openai';
+    } & OpenAisttConfiguration) | ({
+        provider: 'google';
+    } & GoogleSttConfiguration) | ({
+        provider: 'dograh';
+    } & DograhSttService) | ({
+        provider: 'speechmatics';
+    } & SpeechmaticsSttConfiguration) | ({
+        provider: 'sarvam';
+    } & SarvamSttConfiguration) | ({
+        provider: 'speaches';
+    } & SpeachesSttConfiguration) | ({
+        provider: 'huggingface';
+    } & HuggingFaceSttConfiguration) | ({
+        provider: 'assemblyai';
+    } & AssemblyAisttConfiguration) | ({
+        provider: 'gladia';
+    } & GladiaSttConfiguration) | ({
+        provider: 'azure_speech';
+    } & AzureSpeechSttConfiguration) | ({
+        provider: 'smallest';
+    } & SmallestAisttConfiguration);
+    /**
+     * Embeddings
+     */
+    embeddings?: ({
+        provider: 'openai';
+    } & OpenAiEmbeddingsConfiguration) | ({
+        provider: 'openrouter';
+    } & OpenRouterEmbeddingsConfiguration) | ({
+        provider: 'azure';
+    } & AzureOpenAiEmbeddingsConfiguration) | ({
+        provider: 'dograh';
+    } & DograhEmbeddingsConfiguration) | null;
+};
+
+/**
+ * BYOKRealtimeAIModelConfiguration
+ */
+export type ByokRealtimeAiModelConfiguration = {
+    /**
+     * Realtime
+     */
+    realtime: ({
+        provider: 'openai_realtime';
+    } & OpenAiRealtimeLlmConfiguration) | ({
+        provider: 'grok_realtime';
+    } & GrokRealtimeLlmConfiguration) | ({
+        provider: 'ultravox_realtime';
+    } & UltravoxRealtimeLlmConfiguration) | ({
+        provider: 'google_realtime';
+    } & GoogleRealtimeLlmConfiguration) | ({
+        provider: 'google_vertex_realtime';
+    } & GoogleVertexRealtimeLlmConfiguration) | ({
+        provider: 'azure_realtime';
+    } & AzureRealtimeLlmConfiguration);
+    /**
+     * Llm
+     */
+    llm: ({
+        provider: 'openai';
+    } & OpenAillmService) | ({
+        provider: 'google_vertex';
+    } & GoogleVertexLlmConfiguration) | ({
+        provider: 'groq';
+    } & GroqLlmService) | ({
+        provider: 'openrouter';
+    } & OpenRouterLlmConfiguration) | ({
+        provider: 'google';
+    } & GoogleLlmService) | ({
+        provider: 'azure';
+    } & AzureLlmService) | ({
+        provider: 'dograh';
+    } & DograhLlmService) | ({
+        provider: 'aws_bedrock';
+    } & AwsBedrockLlmConfiguration) | ({
+        provider: 'speaches';
+    } & SpeachesLlmConfiguration) | ({
+        provider: 'huggingface';
+    } & HuggingFaceLlmConfiguration) | ({
+        provider: 'minimax';
+    } & MiniMaxLlmConfiguration) | ({
+        provider: 'sarvam';
+    } & SarvamLlmConfiguration);
+    /**
+     * Embeddings
+     */
+    embeddings?: ({
+        provider: 'openai';
+    } & OpenAiEmbeddingsConfiguration) | ({
+        provider: 'openrouter';
+    } & OpenRouterEmbeddingsConfiguration) | ({
+        provider: 'azure';
+    } & AzureOpenAiEmbeddingsConfiguration) | ({
+        provider: 'dograh';
+    } & DograhEmbeddingsConfiguration) | null;
 };
 
 /**
@@ -298,19 +716,19 @@ export type BodyTranscribeAudioApiV1WorkflowRecordingsTranscribePost = {
 /**
  * CalculatorToolDefinition
  *
- * Tool definition for Calculator tools (no configuration needed).
+ * Tool definition for Calculator tools.
  */
 export type CalculatorToolDefinition = {
     /**
      * Schema Version
      *
-     * Schema version
+     * Schema version.
      */
     schema_version?: number;
     /**
      * Type
      *
-     * Tool type
+     * Tool type.
      */
     type: 'calculator';
 };
@@ -329,6 +747,38 @@ export type CallDispositionCodes = {
  * CallType
  */
 export type CallType = 'inbound' | 'outbound';
+
+/**
+ * Camb.ai
+ */
+export type CambTtsConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'camb';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * Camb.ai TTS model.
+     */
+    model?: string;
+    /**
+     * Voice
+     *
+     * Camb.ai voice ID.
+     */
+    voice?: string;
+    /**
+     * Language
+     *
+     * BCP-47 language code.
+     */
+    language?: string;
+};
 
 /**
  * CampaignDefaultsResponse
@@ -572,6 +1022,70 @@ export type CampaignsResponse = {
      * Campaigns
      */
     campaigns: Array<CampaignResponse>;
+};
+
+/**
+ * Cartesia
+ */
+export type CartesiaSttConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'cartesia';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * Cartesia STT model.
+     */
+    model?: string;
+};
+
+/**
+ * Cartesia
+ */
+export type CartesiaTtsConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'cartesia';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * Cartesia TTS model.
+     */
+    model?: string;
+    /**
+     * Voice
+     *
+     * Cartesia voice UUID from your Cartesia dashboard.
+     */
+    voice?: string;
+    /**
+     * Speed
+     *
+     * Speed of the voice.
+     */
+    speed?: number;
+    /**
+     * Volume
+     *
+     * Volume multiplier for generated speech.
+     */
+    volume?: number;
+    /**
+     * Language
+     *
+     * Cartesia language code for TTS synthesis (e.g. 'en', 'tr', 'fr', 'de').
+     */
+    language?: string;
 };
 
 /**
@@ -873,31 +1387,13 @@ export type CreateCredentialRequest = {
 };
 
 /**
- * CreateLoadTestRequest
+ * CreateFolderRequest
  */
-export type CreateLoadTestRequest = {
+export type CreateFolderRequest = {
     /**
-     * Name Prefix
+     * Name
      */
-    name_prefix: string;
-    /**
-     * Actor Workflow Id
-     */
-    actor_workflow_id: number;
-    /**
-     * Adversary Workflow Id
-     */
-    adversary_workflow_id: number;
-    /**
-     * Test Count
-     */
-    test_count: number;
-    /**
-     * Config
-     */
-    config?: {
-        [key: string]: unknown;
-    };
+    name: string;
 };
 
 /**
@@ -941,57 +1437,67 @@ export type CreateServiceKeyResponse = {
 };
 
 /**
- * CreateTestSessionRequest
+ * CreateTextChatSessionRequest
  */
-export type CreateTestSessionRequest = {
+export type CreateTextChatSessionRequest = {
     /**
      * Name
      */
-    name: string;
+    name?: string | null;
     /**
-     * Actor Workflow Id
+     * Initial Context
      */
-    actor_workflow_id: number;
-    /**
-     * Adversary Workflow Id
-     */
-    adversary_workflow_id: number;
-    /**
-     * Config
-     */
-    config?: {
+    initial_context?: {
         [key: string]: unknown;
-    };
+    } | null;
+    /**
+     * Annotations
+     */
+    annotations?: {
+        [key: string]: unknown;
+    } | null;
 };
 
 /**
  * CreateToolRequest
  *
- * Request schema for creating a tool.
+ * Request schema for creating a reusable tool.
  */
 export type CreateToolRequest = {
     /**
      * Name
+     *
+     * Display name for the tool.
      */
     name: string;
     /**
      * Description
+     *
+     * Description shown to the agent when deciding whether to call it.
      */
     description?: string | null;
     /**
      * Category
+     *
+     * Tool category. Must match definition.type.
      */
-    category?: string;
+    category?: 'http_api' | 'end_call' | 'transfer_call' | 'calculator' | 'native' | 'integration' | 'mcp';
     /**
      * Icon
+     *
+     * Lucide icon identifier.
      */
     icon?: string | null;
     /**
      * Icon Color
+     *
+     * Hex color for the tool icon.
      */
     icon_color?: string | null;
     /**
      * Definition
+     *
+     * Typed tool definition.
      */
     definition: ({
         type: 'http_api';
@@ -1001,7 +1507,9 @@ export type CreateToolRequest = {
         type: 'transfer_call';
     } & TransferCallToolDefinition) | ({
         type: 'calculator';
-    } & CalculatorToolDefinition);
+    } & CalculatorToolDefinition) | ({
+        type: 'mcp';
+    } & McpToolDefinition);
 };
 
 /**
@@ -1153,22 +1661,6 @@ export type CurrentUsageResponse = {
      */
     used_dograh_tokens: number;
     /**
-     * Quota Dograh Tokens
-     */
-    quota_dograh_tokens: number;
-    /**
-     * Percentage Used
-     */
-    percentage_used: number;
-    /**
-     * Next Refresh Date
-     */
-    next_refresh_date: string;
-    /**
-     * Quota Enabled
-     */
-    quota_enabled: boolean;
-    /**
      * Total Duration Seconds
      */
     total_duration_seconds: number;
@@ -1176,10 +1668,6 @@ export type CurrentUsageResponse = {
      * Used Amount Usd
      */
     used_amount_usd?: number | null;
-    /**
-     * Quota Amount Usd
-     */
-    quota_amount_usd?: number | null;
     /**
      * Currency
      */
@@ -1276,6 +1764,52 @@ export type DailyUsageItem = {
      * Call Count
      */
     call_count: number;
+};
+
+/**
+ * Deepgram
+ */
+export type DeepgramSttConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'deepgram';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * Deepgram STT model.
+     */
+    model?: string;
+    /**
+     * Language
+     *
+     * Language code. 'multi' enables Nova-3 auto-detect and omits language hints for Flux multilingual auto-detect.
+     */
+    language?: string;
+};
+
+/**
+ * Deepgram
+ */
+export type DeepgramTtsConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'deepgram';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Voice
+     *
+     * Deepgram voice ID (model is inferred from the 'aura-N' prefix).
+     */
+    voice?: string;
 };
 
 /**
@@ -1523,6 +2057,126 @@ export type DocumentUploadResponseSchema = {
 };
 
 /**
+ * Dograh
+ */
+export type DograhEmbeddingsConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'dograh';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * Dograh-managed embedding model.
+     */
+    model?: string;
+};
+
+/**
+ * Dograh
+ */
+export type DograhLlmService = {
+    /**
+     * Provider
+     */
+    provider?: 'dograh';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * Dograh-hosted model tier.
+     */
+    model?: string;
+};
+
+/**
+ * DograhManagedAIModelConfiguration
+ */
+export type DograhManagedAiModelConfiguration = {
+    /**
+     * Api Key
+     */
+    api_key: string;
+    /**
+     * Voice
+     */
+    voice?: string;
+    /**
+     * Speed
+     */
+    speed?: number;
+    /**
+     * Language
+     */
+    language?: string;
+};
+
+/**
+ * Dograh
+ */
+export type DograhSttService = {
+    /**
+     * Provider
+     */
+    provider?: 'dograh';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * Dograh STT tier.
+     */
+    model?: string;
+    /**
+     * Language
+     *
+     * Language code; use 'multi' for auto-detect.
+     */
+    language?: string;
+};
+
+/**
+ * Dograh
+ */
+export type DograhTtsService = {
+    /**
+     * Provider
+     */
+    provider?: 'dograh';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * Dograh TTS tier.
+     */
+    model?: string;
+    /**
+     * Voice
+     *
+     * Voice preset.
+     */
+    voice?: string;
+    /**
+     * Speed
+     *
+     * Speed of the voice.
+     */
+    speed?: number;
+};
+
+/**
  * DuplicateTemplateRequest
  */
 export type DuplicateTemplateRequest = {
@@ -1534,6 +2188,44 @@ export type DuplicateTemplateRequest = {
      * Workflow Name
      */
     workflow_name: string;
+};
+
+/**
+ * ElevenLabs
+ */
+export type ElevenlabsTtsConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'elevenlabs';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Voice
+     *
+     * ElevenLabs voice ID from your Voice Library.
+     */
+    voice?: string;
+    /**
+     * Speed
+     *
+     * Speed of the voice.
+     */
+    speed?: number;
+    /**
+     * Model
+     *
+     * ElevenLabs TTS model.
+     */
+    model?: string;
+    /**
+     * Base Url
+     *
+     * ElevenLabs API base URL. Override to use a Data Residency endpoint (e.g. https://api.eu.residency.elevenlabs.io) for GDPR / HIPAA / regional compliance.
+     */
+    base_url?: string;
 };
 
 /**
@@ -1659,31 +2351,31 @@ export type EndCallConfig = {
     /**
      * Messagetype
      *
-     * Type of goodbye message
+     * Type of goodbye message.
      */
     messageType?: 'none' | 'custom' | 'audio';
     /**
      * Custommessage
      *
-     * Custom message to play before ending the call
+     * Custom message to play before ending the call.
      */
     customMessage?: string | null;
     /**
      * Audiorecordingid
      *
-     * Recording ID for audio goodbye message
+     * Recording ID for audio goodbye message.
      */
     audioRecordingId?: string | null;
     /**
      * Endcallreason
      *
-     * When enabled, LLM must provide a reason for ending the call. The reason is set as call disposition and added to call tags.
+     * When enabled, the model must provide a reason for ending the call. The reason is set as call disposition and added to call tags.
      */
     endCallReason?: boolean;
     /**
      * Endcallreasondescription
      *
-     * Description shown to the LLM for the reason parameter. Used only when endCallReason is enabled.
+     * Description shown to the model for the reason parameter. Used only when endCallReason is enabled.
      */
     endCallReasonDescription?: string | null;
 };
@@ -1697,17 +2389,17 @@ export type EndCallToolDefinition = {
     /**
      * Schema Version
      *
-     * Schema version
+     * Schema version.
      */
     schema_version?: number;
     /**
      * Type
      *
-     * Tool type
+     * Tool type.
      */
     type: 'end_call';
     /**
-     * End Call configuration
+     * End Call configuration.
      */
     config: EndCallConfig;
 };
@@ -1755,6 +2447,286 @@ export type FileMetadataResponse = {
 };
 
 /**
+ * FolderResponse
+ */
+export type FolderResponse = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Created At
+     */
+    created_at: string;
+};
+
+/**
+ * Gladia
+ */
+export type GladiaSttConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'gladia';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * Gladia STT model.
+     */
+    model?: string;
+    /**
+     * Language
+     *
+     * ISO 639-1 language code.
+     */
+    language?: string;
+};
+
+/**
+ * Google
+ */
+export type GoogleLlmService = {
+    /**
+     * Provider
+     */
+    provider?: 'google';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * Gemini model on Google AI Studio (not Vertex).
+     */
+    model?: string;
+};
+
+/**
+ * Google Realtime
+ */
+export type GoogleRealtimeLlmConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'google_realtime';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * Gemini Live model on Google AI Studio (not Vertex).
+     */
+    model?: string;
+    /**
+     * Voice
+     *
+     * Voice the model speaks in.
+     */
+    voice?: string;
+    /**
+     * Language
+     *
+     * ISO 639-1 language code.
+     */
+    language?: string;
+};
+
+/**
+ * Google Cloud
+ */
+export type GoogleSttConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'google';
+    /**
+     * Api Key
+     *
+     * Not used for Google Cloud STT. Leave blank.
+     */
+    api_key?: string | Array<string> | null;
+    /**
+     * Model
+     *
+     * Google Cloud Speech-to-Text V2 recognition model.
+     */
+    model?: string;
+    /**
+     * Language
+     *
+     * Primary BCP-47 language code for recognition.
+     */
+    language?: string;
+    /**
+     * Location
+     *
+     * Google Cloud Speech-to-Text region (for example 'global' or 'us-central1').
+     */
+    location?: string;
+    /**
+     * Credentials
+     *
+     * Paste the entire Google Cloud service-account JSON. If omitted, the server falls back to Application Default Credentials (ADC).
+     */
+    credentials?: string | null;
+};
+
+/**
+ * Google Cloud
+ */
+export type GoogleTtsConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'google';
+    /**
+     * Api Key
+     *
+     * Not used for Google Cloud TTS. Leave blank.
+     */
+    api_key?: string | Array<string> | null;
+    /**
+     * Model
+     *
+     * Google Cloud low-latency TTS engine. Dograh maps this to Pipecat's streaming Google TTS service for Chirp 3 HD and Journey voices.
+     */
+    model?: string;
+    /**
+     * Voice
+     *
+     * Google Cloud voice name. Use a Chirp 3 HD or Journey voice for streaming TTS.
+     */
+    voice?: string;
+    /**
+     * Language
+     *
+     * BCP-47 language code for synthesis.
+     */
+    language?: string;
+    /**
+     * Speed
+     *
+     * Speech speed multiplier for Google streaming TTS.
+     */
+    speed?: number;
+    /**
+     * Location
+     *
+     * Optional Google Cloud regional Text-to-Speech endpoint (for example 'us-central1'). Leave blank to use the default endpoint.
+     */
+    location?: string | null;
+    /**
+     * Credentials
+     *
+     * Paste the entire Google Cloud service-account JSON. If omitted, the server falls back to Application Default Credentials (ADC).
+     */
+    credentials?: string | null;
+};
+
+/**
+ * Google Vertex
+ */
+export type GoogleVertexLlmConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'google_vertex';
+    /**
+     * Api Key
+     *
+     * Not used for Vertex AI — authentication is via the service account in `credentials` (or ADC). Leave blank.
+     */
+    api_key?: string | Array<string> | null;
+    /**
+     * Model
+     *
+     * Gemini model on Vertex AI.
+     */
+    model?: string;
+    /**
+     * Project Id
+     *
+     * Google Cloud project ID for Vertex AI.
+     */
+    project_id: string;
+    /**
+     * Location
+     *
+     * GCP region for the Vertex AI endpoint (e.g. 'global').
+     */
+    location?: string;
+    /**
+     * Credentials
+     *
+     * Paste the entire service-account JSON file contents. If omitted, falls back to Application Default Credentials (ADC).
+     */
+    credentials?: string | null;
+};
+
+/**
+ * Google Vertex Realtime
+ */
+export type GoogleVertexRealtimeLlmConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'google_vertex_realtime';
+    /**
+     * Api Key
+     *
+     * Not used for Vertex AI — authentication is via the service account in `credentials` (or ADC). Leave blank.
+     */
+    api_key?: string | Array<string> | null;
+    /**
+     * Model
+     *
+     * Vertex AI publisher/model identifier.
+     */
+    model?: string;
+    /**
+     * Voice
+     *
+     * Voice the model speaks in.
+     */
+    voice?: string;
+    /**
+     * Language
+     *
+     * BCP-47 language code (e.g. 'en-US').
+     */
+    language?: string;
+    /**
+     * Project Id
+     *
+     * Google Cloud project ID for Vertex AI.
+     */
+    project_id: string;
+    /**
+     * Location
+     *
+     * GCP region for the Vertex AI endpoint (e.g. 'global').
+     */
+    location?: string;
+    /**
+     * Credentials
+     *
+     * Paste the entire service-account JSON file contents. If omitted, falls back to Application Default Credentials (ADC).
+     */
+    credentials?: string | null;
+};
+
+/**
  * GraphConstraints
  *
  * Per-node-type graph rules. WorkflowGraph enforces these at validation.
@@ -1776,6 +2748,60 @@ export type GraphConstraints = {
      * Max Outgoing
      */
     max_outgoing?: number | null;
+    /**
+     * Min Instances
+     */
+    min_instances?: number | null;
+    /**
+     * Max Instances
+     */
+    max_instances?: number | null;
+};
+
+/**
+ * Grok Realtime
+ */
+export type GrokRealtimeLlmConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'grok_realtime';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * Grok realtime voice-agent model.
+     */
+    model?: string;
+    /**
+     * Voice
+     *
+     * Voice the model speaks in.
+     */
+    voice?: string;
+};
+
+/**
+ * Groq
+ */
+export type GroqLlmService = {
+    /**
+     * Provider
+     */
+    provider?: 'groq';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * Groq-hosted model identifier.
+     */
+    model?: string;
 };
 
 /**
@@ -1820,6 +2846,14 @@ export type HealthResponse = {
      * Force Turn Relay
      */
     force_turn_relay: boolean;
+    /**
+     * Stack Project Id
+     */
+    stack_project_id?: string | null;
+    /**
+     * Stack Publishable Client Key
+     */
+    stack_publishable_client_key?: string | null;
 };
 
 /**
@@ -1831,19 +2865,19 @@ export type HttpApiConfig = {
     /**
      * Method
      *
-     * HTTP method (GET, POST, PUT, PATCH, DELETE)
+     * HTTP method to use for the request.
      */
-    method: string;
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
     /**
      * Url
      *
-     * Target URL
+     * Target HTTP or HTTPS URL.
      */
     url: string;
     /**
      * Headers
      *
-     * Static headers to include
+     * Static headers to include with every request.
      */
     headers?: {
         [key: string]: string;
@@ -1851,37 +2885,43 @@ export type HttpApiConfig = {
     /**
      * Credential Uuid
      *
-     * Reference to ExternalCredentialModel for auth
+     * Reference to an external credential for request authentication.
      */
     credential_uuid?: string | null;
     /**
      * Parameters
      *
-     * Parameters that the tool accepts from LLM
+     * Parameters the model must provide when calling this tool.
      */
     parameters?: Array<ToolParameter> | null;
     /**
+     * Preset Parameters
+     *
+     * Parameters injected by Dograh from fixed values or workflow context templates.
+     */
+    preset_parameters?: Array<PresetToolParameter> | null;
+    /**
      * Timeout Ms
      *
-     * Request timeout in milliseconds
+     * Request timeout in milliseconds.
      */
     timeout_ms?: number | null;
     /**
      * Custommessage
      *
-     * Custom message to play after tool execution
+     * Custom message to play after tool execution.
      */
     customMessage?: string | null;
     /**
      * Custommessagetype
      *
-     * Type of custom message: text or audio
+     * Type of custom message.
      */
     customMessageType?: 'text' | 'audio' | null;
     /**
      * Custommessagerecordingid
      *
-     * Recording ID for audio custom message
+     * Recording ID for an audio custom message.
      */
     customMessageRecordingId?: string | null;
 };
@@ -1895,19 +2935,93 @@ export type HttpApiToolDefinition = {
     /**
      * Schema Version
      *
-     * Schema version
+     * Schema version.
      */
     schema_version?: number;
     /**
      * Type
      *
-     * Tool type
+     * Tool type.
      */
     type: 'http_api';
     /**
-     * HTTP API configuration
+     * HTTP API configuration.
      */
     config: HttpApiConfig;
+};
+
+/**
+ * Hugging Face
+ *
+ * Hosted Hugging Face Inference Providers API for usage-based inference.
+ */
+export type HuggingFaceLlmConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'huggingface';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * Hugging Face chat-completion model identifier, optionally with provider suffix.
+     */
+    model?: string;
+    /**
+     * Base Url
+     *
+     * Hugging Face OpenAI-compatible chat-completions router base URL.
+     */
+    base_url?: string;
+    /**
+     * Bill To
+     *
+     * Optional Hugging Face organization or user to bill using X-HF-Bill-To.
+     */
+    bill_to?: string | null;
+};
+
+/**
+ * Hugging Face
+ *
+ * Hosted Hugging Face Inference Providers API for usage-based inference.
+ */
+export type HuggingFaceSttConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'huggingface';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * Hugging Face ASR model identifier served through Inference Providers.
+     */
+    model?: string;
+    /**
+     * Base Url
+     *
+     * Hugging Face Inference Providers router base URL.
+     */
+    base_url?: string;
+    /**
+     * Bill To
+     *
+     * Optional Hugging Face organization or user to bill using X-HF-Bill-To.
+     */
+    bill_to?: string | null;
+    /**
+     * Return Timestamps
+     *
+     * Request timestamp chunks when supported by the selected provider/model.
+     */
+    return_timestamps?: boolean;
 };
 
 /**
@@ -2010,47 +3124,49 @@ export type InitiateCallRequest = {
 };
 
 /**
- * IntegrationResponse
+ * Inworld
+ *
+ * Inworld AI streaming text-to-speech with built-in and cloned voices. Defaults to the Ashley system voice on inworld-tts-2.
  */
-export type IntegrationResponse = {
-    /**
-     * Id
-     */
-    id: number;
-    /**
-     * Integration Id
-     */
-    integration_id: string;
-    /**
-     * Organisation Id
-     */
-    organisation_id: number;
-    /**
-     * Created By
-     */
-    created_by: number | null;
+export type InworldTtsConfiguration = {
     /**
      * Provider
      */
-    provider: string;
+    provider?: 'inworld';
     /**
-     * Is Active
+     * Api Key
      */
-    is_active: boolean;
+    api_key: string | Array<string>;
     /**
-     * Created At
+     * Model
+     *
+     * Inworld TTS model.
      */
-    created_at: string;
+    model?: string;
     /**
-     * Action
+     * Voice
+     *
+     * Inworld voice ID. Use Ashley for the default warm English voice, or a workspace voice ID for a cloned/custom voice.
      */
-    action: string;
+    voice?: string;
     /**
-     * Provider Data
+     * Language
+     *
+     * BCP-47 language code for synthesis.
      */
-    provider_data: {
-        [key: string]: unknown;
-    };
+    language?: string;
+    /**
+     * Speed
+     *
+     * Speech speed multiplier.
+     */
+    speed?: number;
+    /**
+     * Delivery Mode
+     *
+     * Controls stability versus expressiveness for inworld-tts-2 (STABLE, BALANCED, or CREATIVE).
+     */
+    delivery_mode?: 'STABLE' | 'BALANCED' | 'CREATIVE';
 };
 
 /**
@@ -2112,38 +3228,6 @@ export type LastCampaignSettingsResponse = {
 };
 
 /**
- * LoadTestStatsResponse
- */
-export type LoadTestStatsResponse = {
-    /**
-     * Total
-     */
-    total: number;
-    /**
-     * Pending
-     */
-    pending: number;
-    /**
-     * Running
-     */
-    running: number;
-    /**
-     * Completed
-     */
-    completed: number;
-    /**
-     * Failed
-     */
-    failed: number;
-    /**
-     * Sessions
-     */
-    sessions: Array<{
-        [key: string]: unknown;
-    }>;
-};
-
-/**
  * LoginRequest
  */
 export type LoginRequest = {
@@ -2155,6 +3239,165 @@ export type LoginRequest = {
      * Password
      */
     password: string;
+};
+
+/**
+ * MPSBillingAccountResponse
+ */
+export type MpsBillingAccountResponse = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Organization Id
+     */
+    organization_id: number;
+    /**
+     * Billing Mode
+     */
+    billing_mode: string;
+    /**
+     * Cached Balance Credits
+     */
+    cached_balance_credits: number;
+    /**
+     * Currency
+     */
+    currency: string;
+};
+
+/**
+ * MPSBillingCreditsResponse
+ */
+export type MpsBillingCreditsResponse = {
+    /**
+     * Billing Version
+     */
+    billing_version: 'legacy' | 'v2';
+    /**
+     * Total Credits Used
+     */
+    total_credits_used?: number;
+    /**
+     * Remaining Credits
+     */
+    remaining_credits?: number;
+    /**
+     * Total Quota
+     */
+    total_quota?: number;
+    account?: MpsBillingAccountResponse | null;
+    /**
+     * Ledger Entries
+     */
+    ledger_entries?: Array<MpsCreditLedgerEntryResponse>;
+    /**
+     * Total Count
+     */
+    total_count?: number;
+    /**
+     * Page
+     */
+    page?: number;
+    /**
+     * Limit
+     */
+    limit?: number;
+    /**
+     * Total Pages
+     */
+    total_pages?: number;
+};
+
+/**
+ * MPSCreditLedgerEntryResponse
+ */
+export type MpsCreditLedgerEntryResponse = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Entry Type
+     */
+    entry_type: string;
+    /**
+     * Origin
+     */
+    origin?: string | null;
+    /**
+     * Credits Delta
+     */
+    credits_delta: number;
+    /**
+     * Balance After
+     */
+    balance_after: number;
+    /**
+     * Amount Minor
+     */
+    amount_minor?: number | null;
+    /**
+     * Amount Currency
+     */
+    amount_currency?: string | null;
+    /**
+     * Payment Order Id
+     */
+    payment_order_id?: number | null;
+    /**
+     * Metric Code
+     */
+    metric_code?: string | null;
+    /**
+     * Correlation Id
+     */
+    correlation_id?: string | null;
+    /**
+     * Aggregation Key
+     */
+    aggregation_key?: string | null;
+    /**
+     * Usage Event Id
+     */
+    usage_event_id?: number | null;
+    /**
+     * Workflow Run Id
+     */
+    workflow_run_id?: number | null;
+    /**
+     * Workflow Id
+     */
+    workflow_id?: number | null;
+    /**
+     * Billable Quantity
+     */
+    billable_quantity?: number | null;
+    /**
+     * Quantity Unit
+     */
+    quantity_unit?: string | null;
+    /**
+     * Metadata
+     */
+    metadata?: {
+        [key: string]: unknown;
+    };
+    /**
+     * Created At
+     */
+    created_at: string;
+};
+
+/**
+ * MPSCreditPurchaseUrlResponse
+ */
+export type MpsCreditPurchaseUrlResponse = {
+    /**
+     * Checkout Url
+     */
+    checkout_url: string;
 };
 
 /**
@@ -2173,6 +3416,190 @@ export type MpsCreditsResponse = {
      * Total Quota
      */
     total_quota: number;
+};
+
+/**
+ * McpRefreshResponse
+ *
+ * Result of re-discovering an MCP server's tool catalog.
+ */
+export type McpRefreshResponse = {
+    /**
+     * Tool Uuid
+     */
+    tool_uuid: string;
+    /**
+     * Discovered Tools
+     */
+    discovered_tools?: Array<unknown>;
+    /**
+     * Error
+     */
+    error?: string | null;
+};
+
+/**
+ * McpToolConfig
+ *
+ * Configuration for a customer MCP server tool definition.
+ */
+export type McpToolConfig = {
+    /**
+     * Transport
+     *
+     * MCP transport protocol.
+     */
+    transport?: 'streamable_http';
+    /**
+     * Url
+     *
+     * MCP server URL. Must use http:// or https://.
+     */
+    url: string;
+    /**
+     * Credential Uuid
+     *
+     * Reference to an external credential for MCP server auth.
+     */
+    credential_uuid?: string | null;
+    /**
+     * Tools Filter
+     *
+     * Allowlist of MCP tool names to expose. Empty exposes all tools.
+     */
+    tools_filter?: Array<string>;
+    /**
+     * Timeout Secs
+     *
+     * Connection timeout in seconds.
+     */
+    timeout_secs?: number;
+    /**
+     * Sse Read Timeout Secs
+     *
+     * SSE read timeout in seconds.
+     */
+    sse_read_timeout_secs?: number;
+    /**
+     * Discovered Tools
+     *
+     * Server-managed cache of the MCP server's tool catalog [{name, description}]. Populated best-effort by the backend.
+     */
+    discovered_tools?: Array<{
+        [key: string]: unknown;
+    }>;
+};
+
+/**
+ * McpToolDefinition
+ *
+ * Persisted MCP tool definition.
+ */
+export type McpToolDefinition = {
+    /**
+     * Schema Version
+     *
+     * Schema version.
+     */
+    schema_version?: number;
+    /**
+     * Type
+     *
+     * Tool type.
+     */
+    type: 'mcp';
+    /**
+     * MCP server configuration.
+     */
+    config: McpToolConfig;
+};
+
+/**
+ * MiniMaxLLMConfiguration
+ */
+export type MiniMaxLlmConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'minimax';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * MiniMax chat model.
+     */
+    model?: string;
+    /**
+     * Base Url
+     *
+     * MiniMax OpenAI-compatible API endpoint.
+     */
+    base_url?: string;
+    /**
+     * Temperature
+     *
+     * Sampling temperature. MiniMax requires > 0.
+     */
+    temperature?: number;
+};
+
+/**
+ * MiniMaxTTSConfiguration
+ */
+export type MiniMaxTtsConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'minimax';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * MiniMax TTS model.
+     */
+    model?: string;
+    /**
+     * Voice
+     *
+     * MiniMax voice ID.
+     */
+    voice?: string;
+    /**
+     * Base Url
+     *
+     * MiniMax TTS API endpoint (must include the /v1/t2a_v2 path). Defaults to the global endpoint; override with https://api.minimaxi.chat/v1/t2a_v2 (mainland China) or https://api-uw.minimax.io/v1/t2a_v2 (US-West).
+     */
+    base_url?: string;
+    /**
+     * Speed
+     *
+     * Speech speed (0.5 to 2.0).
+     */
+    speed?: number;
+    /**
+     * Group Id
+     *
+     * MiniMax Group ID (found in your MiniMax dashboard under Account → Group).
+     */
+    group_id: string;
+};
+
+/**
+ * MoveWorkflowToFolderRequest
+ *
+ * Move a workflow into a folder, or to "Uncategorized" when null.
+ */
+export type MoveWorkflowToFolderRequest = {
+    /**
+     * Folder Id
+     */
+    folder_id?: number | null;
 };
 
 /**
@@ -2262,6 +3689,332 @@ export type NodeTypesResponse = {
      * Node Types
      */
     node_types: Array<NodeSpec>;
+};
+
+/**
+ * OnboardingState
+ *
+ * Per-user onboarding state, stored under UserConfigurationKey.ONBOARDING.
+ *
+ * Server-authoritative replacement for the browser-localStorage onboarding
+ * store, so the post-signup gate and one-time tooltips hold across devices.
+ */
+export type OnboardingState = {
+    /**
+     * Completed At
+     */
+    completed_at?: string | null;
+    /**
+     * Skipped
+     */
+    skipped?: boolean;
+    /**
+     * Seen Tooltips
+     */
+    seen_tooltips?: Array<string>;
+    /**
+     * Completed Actions
+     */
+    completed_actions?: Array<string>;
+};
+
+/**
+ * OnboardingStateUpdate
+ *
+ * Partial update merged into the stored state.
+ *
+ * Scalars overwrite when supplied; list entries are unioned into the stored
+ * lists, so concurrent updates (e.g. two tabs marking different tooltips)
+ * don't drop each other's items.
+ */
+export type OnboardingStateUpdate = {
+    /**
+     * Completed At
+     */
+    completed_at?: string | null;
+    /**
+     * Skipped
+     */
+    skipped?: boolean | null;
+    /**
+     * Seen Tooltips
+     */
+    seen_tooltips?: Array<string> | null;
+    /**
+     * Completed Actions
+     */
+    completed_actions?: Array<string> | null;
+};
+
+/**
+ * OpenAI
+ */
+export type OpenAiEmbeddingsConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'openai';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * OpenAI embedding model.
+     */
+    model?: string;
+};
+
+/**
+ * OpenAI
+ */
+export type OpenAillmService = {
+    /**
+     * Provider
+     */
+    provider?: 'openai';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * OpenAI chat model to use.
+     */
+    model?: string;
+    /**
+     * Base Url
+     *
+     * Override only if using an OpenAI-compatible API (e.g. local LLM, proxy).
+     */
+    base_url?: string;
+};
+
+/**
+ * OpenAI Realtime
+ */
+export type OpenAiRealtimeLlmConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'openai_realtime';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * OpenAI realtime (speech-to-speech) model.
+     */
+    model?: string;
+    /**
+     * Voice
+     *
+     * Voice the model speaks in.
+     */
+    voice?: string;
+};
+
+/**
+ * OpenAI
+ */
+export type OpenAisttConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'openai';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * OpenAI transcription model.
+     */
+    model?: string;
+    /**
+     * Base Url
+     *
+     * Override only if using an OpenAI-compatible API (e.g. local STT, proxy).
+     */
+    base_url?: string;
+};
+
+/**
+ * OpenAI
+ */
+export type OpenAittsService = {
+    /**
+     * Provider
+     */
+    provider?: 'openai';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * OpenAI TTS model.
+     */
+    model?: string;
+    /**
+     * Voice
+     *
+     * OpenAI TTS voice name.
+     */
+    voice?: string;
+    /**
+     * Base Url
+     *
+     * Override only if using an OpenAI-compatible API (e.g. local TTS, proxy).
+     */
+    base_url?: string;
+};
+
+/**
+ * Open Router
+ */
+export type OpenRouterEmbeddingsConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'openrouter';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * OpenRouter-hosted embedding model slug.
+     */
+    model?: string;
+    /**
+     * Base Url
+     *
+     * Override only if proxying OpenRouter through your own gateway.
+     */
+    base_url?: string;
+};
+
+/**
+ * Open Router
+ */
+export type OpenRouterLlmConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'openrouter';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * OpenRouter model slug in 'vendor/model' form.
+     */
+    model?: string;
+    /**
+     * Base Url
+     *
+     * Override only if proxying OpenRouter through your own gateway.
+     */
+    base_url?: string;
+};
+
+/**
+ * OrganizationAIModelConfigurationResponse
+ */
+export type OrganizationAiModelConfigurationResponse = {
+    /**
+     * Configuration
+     */
+    configuration: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Effective Configuration
+     */
+    effective_configuration: {
+        [key: string]: unknown;
+    };
+    /**
+     * Source
+     */
+    source: 'organization_v2' | 'legacy_user_v1' | 'empty';
+};
+
+/**
+ * OrganizationAIModelConfigurationV2
+ */
+export type OrganizationAiModelConfigurationV2 = {
+    /**
+     * Version
+     */
+    version?: 2;
+    /**
+     * Mode
+     */
+    mode: 'dograh' | 'byok';
+    dograh?: DograhManagedAiModelConfiguration | null;
+    byok?: ByokaiModelConfiguration | null;
+};
+
+/**
+ * OrganizationContextResponse
+ */
+export type OrganizationContextResponse = {
+    /**
+     * Organization Id
+     */
+    organization_id?: number | null;
+    /**
+     * Organization Provider Id
+     */
+    organization_provider_id?: string | null;
+    model_services: OrganizationModelServicesContext;
+};
+
+/**
+ * OrganizationModelServicesContext
+ */
+export type OrganizationModelServicesContext = {
+    /**
+     * Config Source
+     */
+    config_source: 'organization_v2' | 'legacy_user_v1' | 'empty';
+    /**
+     * Has Model Configuration V2
+     */
+    has_model_configuration_v2: boolean;
+    /**
+     * Managed Service Version
+     */
+    managed_service_version?: number | null;
+    /**
+     * Uses Managed Service V2
+     */
+    uses_managed_service_v2: boolean;
+};
+
+/**
+ * OrganizationPreferences
+ */
+export type OrganizationPreferences = {
+    /**
+     * Test Phone Number
+     */
+    test_phone_number?: string | null;
+    /**
+     * Timezone
+     */
+    timezone?: string | null;
 };
 
 /**
@@ -2478,6 +4231,38 @@ export type PlivoConfigurationResponse = {
      * From Numbers
      */
     from_numbers: Array<string>;
+};
+
+/**
+ * PresetToolParameter
+ *
+ * A parameter injected by Dograh at runtime.
+ */
+export type PresetToolParameter = {
+    /**
+     * Name
+     *
+     * Parameter name used as a key in the request body.
+     */
+    name: string;
+    /**
+     * Type
+     *
+     * JSON type for the resolved value.
+     */
+    type: 'string' | 'number' | 'boolean' | 'object' | 'array';
+    /**
+     * Value Template
+     *
+     * Fixed value or template, e.g. {{initial_context.phone_number}}.
+     */
+    value_template: string;
+    /**
+     * Required
+     *
+     * Whether the parameter must resolve to a non-empty value.
+     */
+    required?: boolean;
 };
 
 /**
@@ -2947,6 +4732,58 @@ export type RetryConfigResponse = {
 };
 
 /**
+ * RewindTextChatSessionRequest
+ */
+export type RewindTextChatSessionRequest = {
+    /**
+     * Cursor Turn Id
+     */
+    cursor_turn_id?: string | null;
+    /**
+     * Expected Revision
+     */
+    expected_revision?: number | null;
+};
+
+/**
+ * Rime
+ */
+export type RimeTtsConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'rime';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * Rime TTS model.
+     */
+    model?: string;
+    /**
+     * Voice
+     *
+     * Rime voice ID.
+     */
+    voice?: string;
+    /**
+     * Speed
+     *
+     * Speech speed multiplier.
+     */
+    speed?: number;
+    /**
+     * Language
+     *
+     * ISO 639-1 language code.
+     */
+    language?: string;
+};
+
+/**
  * S3SignedUrlResponse
  */
 export type S3SignedUrlResponse = {
@@ -2958,6 +4795,96 @@ export type S3SignedUrlResponse = {
      * Expires In
      */
     expires_in: number;
+};
+
+/**
+ * Sarvam
+ */
+export type SarvamLlmConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'sarvam';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * Sarvam chat model. Use sarvam-30b for low-latency voice agents; sarvam-105b for complex multi-step reasoning.
+     */
+    model?: string;
+    /**
+     * Temperature
+     *
+     * Sampling temperature. Sarvam recommends 0.5 for balanced conversational responses.
+     */
+    temperature?: number;
+};
+
+/**
+ * Sarvam
+ */
+export type SarvamSttConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'sarvam';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * Sarvam STT model. saarika:v2.5 transcribes in the spoken language; saaras:v3 is the recommended model with flexible output modes.
+     */
+    model?: string;
+    /**
+     * Language
+     *
+     * BCP-47 language code. Use unknown for automatic language detection.
+     */
+    language?: string;
+};
+
+/**
+ * Sarvam
+ */
+export type SarvamTtsConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'sarvam';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * Sarvam TTS model (voice list depends on this).
+     */
+    model?: string;
+    /**
+     * Voice
+     *
+     * Sarvam voice name or custom voice ID.
+     */
+    voice?: string;
+    /**
+     * Language
+     *
+     * BCP-47 Indian-language code (e.g. hi-IN, en-IN).
+     */
+    language?: string;
+    /**
+     * Speed
+     *
+     * Speech speed multiplier.
+     */
+    speed?: number;
 };
 
 /**
@@ -3039,20 +4966,6 @@ export type ServiceKeyResponse = {
 };
 
 /**
- * SessionResponse
- */
-export type SessionResponse = {
-    /**
-     * Session Token
-     */
-    session_token: string;
-    /**
-     * Expires At
-     */
-    expires_at: string;
-};
-
-/**
  * SignupRequest
  */
 export type SignupRequest = {
@@ -3068,6 +4981,208 @@ export type SignupRequest = {
      * Name
      */
     name?: string | null;
+};
+
+/**
+ * Smallest AI
+ *
+ * Smallest AI ultralow-latency TTS (Waves) and STT (Pulse) APIs.
+ */
+export type SmallestAisttConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'smallest';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * Smallest AI STT model. Supports 38 languages with real-time streaming.
+     */
+    model?: string;
+    /**
+     * Language
+     *
+     * ISO 639-1 language code for transcription.
+     */
+    language?: string;
+};
+
+/**
+ * Smallest AI
+ *
+ * Smallest AI ultralow-latency TTS (Waves) and STT (Pulse) APIs.
+ */
+export type SmallestAittsConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'smallest';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * Smallest AI TTS model. lightning_v3.1_pro is the premium pool (American, British, Indian accents); lightning_v3.1 is the standard pool with 217 voices across 12 languages.
+     */
+    model?: string;
+    /**
+     * Voice
+     *
+     * Smallest AI voice ID. Available voices differ by model: lightning_v3.1 has a broad multilingual pool; lightning_v3.1_pro has premium American, British, and Indian accent voices (English + Hindi only).
+     */
+    voice?: string;
+    /**
+     * Language
+     *
+     * ISO 639-1 language code for synthesis.
+     */
+    language?: string;
+    /**
+     * Speed
+     *
+     * Speech speed multiplier (0.5 to 2.0).
+     */
+    speed?: number;
+};
+
+/**
+ * Local Models (Speaches)
+ *
+ * Self-hosted OpenAI-compatible local models. See the Speaches project for setup and supported backends.
+ */
+export type SpeachesLlmConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'speaches';
+    /**
+     * Api Key
+     *
+     * Usually not required for self-hosted endpoints. Leave blank unless your server enforces one.
+     */
+    api_key?: string | Array<string> | null;
+    /**
+     * Model
+     *
+     * Model name as exposed by your OpenAI-compatible server.
+     */
+    model?: string;
+    /**
+     * Base Url
+     *
+     * OpenAI-compatible endpoint (Ollama, vLLM, etc.).
+     */
+    base_url?: string;
+};
+
+/**
+ * Local Models (Speaches)
+ *
+ * Self-hosted OpenAI-compatible local models. See the Speaches project for setup and supported backends.
+ */
+export type SpeachesSttConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'speaches';
+    /**
+     * Api Key
+     *
+     * Usually not required for self-hosted STT. Leave blank unless enforced.
+     */
+    api_key?: string | Array<string> | null;
+    /**
+     * Model
+     *
+     * Whisper model identifier as served by your STT endpoint.
+     */
+    model?: string;
+    /**
+     * Language
+     *
+     * ISO 639-1 language code.
+     */
+    language?: string;
+    /**
+     * Base Url
+     *
+     * OpenAI-compatible STT endpoint (Speaches, etc.).
+     */
+    base_url?: string;
+};
+
+/**
+ * Local Models (Speaches)
+ *
+ * Self-hosted OpenAI-compatible local models. See the Speaches project for setup and supported backends.
+ */
+export type SpeachesTtsConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'speaches';
+    /**
+     * Api Key
+     *
+     * Usually not required for self-hosted TTS. Leave blank unless enforced.
+     */
+    api_key?: string | Array<string> | null;
+    /**
+     * Model
+     *
+     * Model name as served by your TTS endpoint (e.g. Kokoro-FastAPI).
+     */
+    model?: string;
+    /**
+     * Voice
+     *
+     * Voice ID for the TTS engine.
+     */
+    voice?: string;
+    /**
+     * Base Url
+     *
+     * OpenAI-compatible TTS endpoint (Kokoro-FastAPI, etc.).
+     */
+    base_url?: string;
+    /**
+     * Speed
+     *
+     * Speech speed (0.25 to 4.0).
+     */
+    speed?: number;
+};
+
+/**
+ * Speechmatics
+ */
+export type SpeechmaticsSttConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'speechmatics';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * Speechmatics operating point: 'standard' or 'enhanced'.
+     */
+    model?: string;
+    /**
+     * Language
+     *
+     * ISO 639-1 language code.
+     */
+    language?: string;
 };
 
 /**
@@ -3499,68 +5614,6 @@ export type TelnyxConfigurationResponse = {
 };
 
 /**
- * TestSessionResponse
- */
-export type TestSessionResponse = {
-    /**
-     * Id
-     */
-    id: number;
-    /**
-     * Name
-     */
-    name: string;
-    /**
-     * Status
-     */
-    status: string;
-    /**
-     * Actor Workflow Id
-     */
-    actor_workflow_id: number;
-    /**
-     * Adversary Workflow Id
-     */
-    adversary_workflow_id: number;
-    /**
-     * Load Test Group Id
-     */
-    load_test_group_id: string | null;
-    /**
-     * Test Index
-     */
-    test_index: number | null;
-    /**
-     * Config
-     */
-    config: {
-        [key: string]: unknown;
-    };
-    /**
-     * Results
-     */
-    results: {
-        [key: string]: unknown;
-    } | null;
-    /**
-     * Error
-     */
-    error: string | null;
-    /**
-     * Created At
-     */
-    created_at: string;
-    /**
-     * Started At
-     */
-    started_at: string | null;
-    /**
-     * Completed At
-     */
-    completed_at: string | null;
-};
-
-/**
  * TimeSlotRequest
  */
 export type TimeSlotRequest = {
@@ -3599,31 +5652,31 @@ export type TimeSlotResponse = {
 /**
  * ToolParameter
  *
- * A parameter that the tool accepts.
+ * A parameter that the tool accepts from the model at call time.
  */
 export type ToolParameter = {
     /**
      * Name
      *
-     * Parameter name (used as key in request body)
+     * Parameter name used as a key in the tool request body.
      */
     name: string;
     /**
      * Type
      *
-     * Parameter type: string, number, or boolean
+     * JSON type for the parameter value.
      */
-    type: string;
+    type: 'string' | 'number' | 'boolean' | 'object' | 'array';
     /**
      * Description
      *
-     * Description of what this parameter is for
+     * Description shown to the model for this parameter.
      */
     description: string;
     /**
      * Required
      *
-     * Whether this parameter is required
+     * Whether this parameter is required when the tool is called.
      */
     required?: boolean;
 };
@@ -3631,7 +5684,7 @@ export type ToolParameter = {
 /**
  * ToolResponse
  *
- * Response schema for a tool.
+ * Response schema for a reusable tool.
  */
 export type ToolResponse = {
     /**
@@ -3692,31 +5745,31 @@ export type TransferCallConfig = {
     /**
      * Destination
      *
-     * Phone number or SIP endpoint to transfer the call to (E.164 format e.g., +1234567890, or SIP endpoint e.g., PJSIP/1234)
+     * Phone number or SIP endpoint to transfer the call to, e.g. +1234567890 or PJSIP/1234.
      */
     destination: string;
     /**
      * Messagetype
      *
-     * Type of message to play before transfer
+     * Type of message to play before transfer.
      */
     messageType?: 'none' | 'custom' | 'audio';
     /**
      * Custommessage
      *
-     * Custom message to play before transferring the call
+     * Custom message to play before transferring.
      */
     customMessage?: string | null;
     /**
      * Audiorecordingid
      *
-     * Recording ID for audio message before transfer
+     * Recording ID for audio message before transfer.
      */
     audioRecordingId?: string | null;
     /**
      * Timeout
      *
-     * Maximum time in seconds to wait for destination to answer (5-120 seconds)
+     * Maximum seconds to wait for the destination to answer.
      */
     timeout?: number;
 };
@@ -3730,17 +5783,17 @@ export type TransferCallToolDefinition = {
     /**
      * Schema Version
      *
-     * Schema version
+     * Schema version.
      */
     schema_version?: number;
     /**
      * Type
      *
-     * Tool type
+     * Tool type.
      */
     type: 'transfer_call';
     /**
-     * Transfer Call configuration
+     * Transfer Call configuration.
      */
     config: TransferCallConfig;
 };
@@ -3866,6 +5919,32 @@ export type TwilioConfigurationResponse = {
 };
 
 /**
+ * Ultravox Realtime
+ */
+export type UltravoxRealtimeLlmConfiguration = {
+    /**
+     * Provider
+     */
+    provider?: 'ultravox_realtime';
+    /**
+     * Api Key
+     */
+    api_key: string | Array<string>;
+    /**
+     * Model
+     *
+     * Ultravox realtime voice-agent model.
+     */
+    model?: string;
+    /**
+     * Voice
+     *
+     * Ultravox voice name or voice ID.
+     */
+    voice?: string;
+};
+
+/**
  * UpdateCampaignRequest
  */
 export type UpdateCampaignRequest = {
@@ -3906,21 +5985,19 @@ export type UpdateCredentialRequest = {
 };
 
 /**
- * UpdateIntegrationRequest
+ * UpdateFolderRequest
  */
-export type UpdateIntegrationRequest = {
+export type UpdateFolderRequest = {
     /**
-     * Selected Files
+     * Name
      */
-    selected_files: Array<{
-        [key: string]: unknown;
-    }>;
+    name: string;
 };
 
 /**
  * UpdateToolRequest
  *
- * Request schema for updating a tool.
+ * Request schema for updating a reusable tool.
  */
 export type UpdateToolRequest = {
     /**
@@ -3950,7 +6027,9 @@ export type UpdateToolRequest = {
         type: 'transfer_call';
     } & TransferCallToolDefinition) | ({
         type: 'calculator';
-    } & CalculatorToolDefinition) | null;
+    } & CalculatorToolDefinition) | ({
+        type: 'mcp';
+    } & McpToolDefinition) | null;
     /**
      * Status
      */
@@ -4216,6 +6295,26 @@ export type VobizConfigurationResponse = {
 };
 
 /**
+ * VoiceFacets
+ *
+ * Distinct selector values across a provider's full voice catalog.
+ */
+export type VoiceFacets = {
+    /**
+     * Genders
+     */
+    genders?: Array<string>;
+    /**
+     * Accents
+     */
+    accents?: Array<string>;
+    /**
+     * Languages
+     */
+    languages?: Array<string>;
+};
+
+/**
  * VoiceInfo
  */
 export type VoiceInfo = {
@@ -4261,6 +6360,7 @@ export type VoicesResponse = {
      * Voices
      */
     voices: Array<VoiceInfo>;
+    facets?: VoiceFacets | null;
 };
 
 /**
@@ -4409,6 +6509,14 @@ export type WorkflowListResponse = {
      * Total Runs
      */
     total_runs: number;
+    /**
+     * Folder Id
+     */
+    folder_id?: number | null;
+    /**
+     * Workflow Uuid
+     */
+    workflow_uuid?: string | null;
 };
 
 /**
@@ -4557,9 +6665,43 @@ export type WorkflowRunResponseSchema = {
      */
     recording_url: string | null;
     /**
+     * User Recording Url
+     */
+    user_recording_url?: string | null;
+    /**
+     * Bot Recording Url
+     */
+    bot_recording_url?: string | null;
+    /**
+     * Transcript Public Url
+     */
+    transcript_public_url?: string | null;
+    /**
+     * Recording Public Url
+     */
+    recording_public_url?: string | null;
+    /**
+     * User Recording Public Url
+     */
+    user_recording_public_url?: string | null;
+    /**
+     * Bot Recording Public Url
+     */
+    bot_recording_public_url?: string | null;
+    /**
+     * Public Access Token
+     */
+    public_access_token?: string | null;
+    /**
      * Cost Info
      */
     cost_info: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Usage Info
+     */
+    usage_info?: {
         [key: string]: unknown;
     } | null;
     /**
@@ -4591,6 +6733,78 @@ export type WorkflowRunResponseSchema = {
     annotations?: {
         [key: string]: unknown;
     } | null;
+};
+
+/**
+ * WorkflowRunTextSessionResponse
+ */
+export type WorkflowRunTextSessionResponse = {
+    /**
+     * Workflow Run Id
+     */
+    workflow_run_id: number;
+    /**
+     * Workflow Id
+     */
+    workflow_id: number;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Mode
+     */
+    mode: string;
+    /**
+     * State
+     */
+    state: string;
+    /**
+     * Is Completed
+     */
+    is_completed: boolean;
+    /**
+     * Revision
+     */
+    revision: number;
+    /**
+     * Initial Context
+     */
+    initial_context?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Gathered Context
+     */
+    gathered_context?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Annotations
+     */
+    annotations?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Session Data
+     */
+    session_data: {
+        [key: string]: unknown;
+    };
+    /**
+     * Checkpoint
+     */
+    checkpoint: {
+        [key: string]: unknown;
+    };
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Updated At
+     */
+    updated_at?: string | null;
 };
 
 /**
@@ -4634,6 +6848,34 @@ export type WorkflowRunUsageResponse = {
      */
     transcript_url?: string | null;
     /**
+     * User Recording Url
+     */
+    user_recording_url?: string | null;
+    /**
+     * Bot Recording Url
+     */
+    bot_recording_url?: string | null;
+    /**
+     * Recording Public Url
+     */
+    recording_public_url?: string | null;
+    /**
+     * Transcript Public Url
+     */
+    transcript_public_url?: string | null;
+    /**
+     * User Recording Public Url
+     */
+    user_recording_public_url?: string | null;
+    /**
+     * Bot Recording Public Url
+     */
+    bot_recording_public_url?: string | null;
+    /**
+     * Public Access Token
+     */
+    public_access_token?: string | null;
+    /**
      * Phone Number
      *
      * Deprecated. Use caller_number and called_number instead.
@@ -4653,6 +6895,10 @@ export type WorkflowRunUsageResponse = {
      * Call Type
      */
     call_type?: string | null;
+    /**
+     * Mode
+     */
+    mode?: string | null;
     /**
      * Disposition
      */
@@ -4991,20 +7237,6 @@ export type HandleCloudonixCdrApiV1TelephonyCloudonixCdrPostResponses = {
 
 export type HandlePlivoHangupCallbackApiV1TelephonyPlivoHangupCallbackWorkflowRunIdPostData = {
     body?: never;
-    headers?: {
-        /**
-         * X-Plivo-Signature-V3
-         */
-        'x-plivo-signature-v3'?: string | null;
-        /**
-         * X-Plivo-Signature-Ma-V3
-         */
-        'x-plivo-signature-ma-v3'?: string | null;
-        /**
-         * X-Plivo-Signature-V3-Nonce
-         */
-        'x-plivo-signature-v3-nonce'?: string | null;
-    };
     path: {
         /**
          * Workflow Run Id
@@ -5037,20 +7269,6 @@ export type HandlePlivoHangupCallbackApiV1TelephonyPlivoHangupCallbackWorkflowRu
 
 export type HandlePlivoRingCallbackApiV1TelephonyPlivoRingCallbackWorkflowRunIdPostData = {
     body?: never;
-    headers?: {
-        /**
-         * X-Plivo-Signature-V3
-         */
-        'x-plivo-signature-v3'?: string | null;
-        /**
-         * X-Plivo-Signature-Ma-V3
-         */
-        'x-plivo-signature-ma-v3'?: string | null;
-        /**
-         * X-Plivo-Signature-V3-Nonce
-         */
-        'x-plivo-signature-v3-nonce'?: string | null;
-    };
     path: {
         /**
          * Workflow Run Id
@@ -5147,12 +7365,6 @@ export type HandleTelnyxTransferResultApiV1TelephonyTelnyxTransferResultTransfer
 
 export type HandleTwilioStatusCallbackApiV1TelephonyTwilioStatusCallbackWorkflowRunIdPostData = {
     body?: never;
-    headers?: {
-        /**
-         * X-Webhook-Signature
-         */
-        'x-webhook-signature'?: string | null;
-    };
     path: {
         /**
          * Workflow Run Id
@@ -5185,16 +7397,6 @@ export type HandleTwilioStatusCallbackApiV1TelephonyTwilioStatusCallbackWorkflow
 
 export type HandleVobizHangupCallbackApiV1TelephonyVobizHangupCallbackWorkflowRunIdPostData = {
     body?: never;
-    headers?: {
-        /**
-         * X-Vobiz-Signature
-         */
-        'x-vobiz-signature'?: string | null;
-        /**
-         * X-Vobiz-Timestamp
-         */
-        'x-vobiz-timestamp'?: string | null;
-    };
     path: {
         /**
          * Workflow Run Id
@@ -5227,16 +7429,6 @@ export type HandleVobizHangupCallbackApiV1TelephonyVobizHangupCallbackWorkflowRu
 
 export type HandleVobizRingCallbackApiV1TelephonyVobizRingCallbackWorkflowRunIdPostData = {
     body?: never;
-    headers?: {
-        /**
-         * X-Vobiz-Signature
-         */
-        'x-vobiz-signature'?: string | null;
-        /**
-         * X-Vobiz-Timestamp
-         */
-        'x-vobiz-timestamp'?: string | null;
-    };
     path: {
         /**
          * Workflow Run Id
@@ -5269,16 +7461,6 @@ export type HandleVobizRingCallbackApiV1TelephonyVobizRingCallbackWorkflowRunIdP
 
 export type HandleVobizHangupCallbackByWorkflowApiV1TelephonyVobizHangupCallbackWorkflowWorkflowIdPostData = {
     body?: never;
-    headers?: {
-        /**
-         * X-Vobiz-Signature
-         */
-        'x-vobiz-signature'?: string | null;
-        /**
-         * X-Vobiz-Timestamp
-         */
-        'x-vobiz-timestamp'?: string | null;
-    };
     path: {
         /**
          * Workflow Id
@@ -5936,6 +8118,50 @@ export type UpdateWorkflowStatusApiV1WorkflowWorkflowIdStatusPutResponses = {
 
 export type UpdateWorkflowStatusApiV1WorkflowWorkflowIdStatusPutResponse = UpdateWorkflowStatusApiV1WorkflowWorkflowIdStatusPutResponses[keyof UpdateWorkflowStatusApiV1WorkflowWorkflowIdStatusPutResponses];
 
+export type MoveWorkflowToFolderApiV1WorkflowWorkflowIdFolderPutData = {
+    body: MoveWorkflowToFolderRequest;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path: {
+        /**
+         * Workflow Id
+         */
+        workflow_id: number;
+    };
+    query?: never;
+    url: '/api/v1/workflow/{workflow_id}/folder';
+};
+
+export type MoveWorkflowToFolderApiV1WorkflowWorkflowIdFolderPutErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type MoveWorkflowToFolderApiV1WorkflowWorkflowIdFolderPutError = MoveWorkflowToFolderApiV1WorkflowWorkflowIdFolderPutErrors[keyof MoveWorkflowToFolderApiV1WorkflowWorkflowIdFolderPutErrors];
+
+export type MoveWorkflowToFolderApiV1WorkflowWorkflowIdFolderPutResponses = {
+    /**
+     * Successful Response
+     */
+    200: WorkflowListResponse;
+};
+
+export type MoveWorkflowToFolderApiV1WorkflowWorkflowIdFolderPutResponse = MoveWorkflowToFolderApiV1WorkflowWorkflowIdFolderPutResponses[keyof MoveWorkflowToFolderApiV1WorkflowWorkflowIdFolderPutResponses];
+
 export type UpdateWorkflowApiV1WorkflowWorkflowIdPutData = {
     body: UpdateWorkflowRequest;
     headers?: {
@@ -6345,6 +8571,194 @@ export type GetAmbientNoiseUploadUrlApiV1WorkflowAmbientNoiseUploadUrlPostRespon
 
 export type GetAmbientNoiseUploadUrlApiV1WorkflowAmbientNoiseUploadUrlPostResponse = GetAmbientNoiseUploadUrlApiV1WorkflowAmbientNoiseUploadUrlPostResponses[keyof GetAmbientNoiseUploadUrlApiV1WorkflowAmbientNoiseUploadUrlPostResponses];
 
+export type CreateTextChatSessionApiV1WorkflowWorkflowIdTextChatSessionsPostData = {
+    body: CreateTextChatSessionRequest;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path: {
+        /**
+         * Workflow Id
+         */
+        workflow_id: number;
+    };
+    query?: never;
+    url: '/api/v1/workflow/{workflow_id}/text-chat/sessions';
+};
+
+export type CreateTextChatSessionApiV1WorkflowWorkflowIdTextChatSessionsPostErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateTextChatSessionApiV1WorkflowWorkflowIdTextChatSessionsPostError = CreateTextChatSessionApiV1WorkflowWorkflowIdTextChatSessionsPostErrors[keyof CreateTextChatSessionApiV1WorkflowWorkflowIdTextChatSessionsPostErrors];
+
+export type CreateTextChatSessionApiV1WorkflowWorkflowIdTextChatSessionsPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: WorkflowRunTextSessionResponse;
+};
+
+export type CreateTextChatSessionApiV1WorkflowWorkflowIdTextChatSessionsPostResponse = CreateTextChatSessionApiV1WorkflowWorkflowIdTextChatSessionsPostResponses[keyof CreateTextChatSessionApiV1WorkflowWorkflowIdTextChatSessionsPostResponses];
+
+export type GetTextChatSessionApiV1WorkflowWorkflowIdTextChatSessionsRunIdGetData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path: {
+        /**
+         * Workflow Id
+         */
+        workflow_id: number;
+        /**
+         * Run Id
+         */
+        run_id: number;
+    };
+    query?: never;
+    url: '/api/v1/workflow/{workflow_id}/text-chat/sessions/{run_id}';
+};
+
+export type GetTextChatSessionApiV1WorkflowWorkflowIdTextChatSessionsRunIdGetErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetTextChatSessionApiV1WorkflowWorkflowIdTextChatSessionsRunIdGetError = GetTextChatSessionApiV1WorkflowWorkflowIdTextChatSessionsRunIdGetErrors[keyof GetTextChatSessionApiV1WorkflowWorkflowIdTextChatSessionsRunIdGetErrors];
+
+export type GetTextChatSessionApiV1WorkflowWorkflowIdTextChatSessionsRunIdGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: WorkflowRunTextSessionResponse;
+};
+
+export type GetTextChatSessionApiV1WorkflowWorkflowIdTextChatSessionsRunIdGetResponse = GetTextChatSessionApiV1WorkflowWorkflowIdTextChatSessionsRunIdGetResponses[keyof GetTextChatSessionApiV1WorkflowWorkflowIdTextChatSessionsRunIdGetResponses];
+
+export type AppendTextChatMessageApiV1WorkflowWorkflowIdTextChatSessionsRunIdMessagesPostData = {
+    body: AppendTextChatMessageRequest;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path: {
+        /**
+         * Workflow Id
+         */
+        workflow_id: number;
+        /**
+         * Run Id
+         */
+        run_id: number;
+    };
+    query?: never;
+    url: '/api/v1/workflow/{workflow_id}/text-chat/sessions/{run_id}/messages';
+};
+
+export type AppendTextChatMessageApiV1WorkflowWorkflowIdTextChatSessionsRunIdMessagesPostErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AppendTextChatMessageApiV1WorkflowWorkflowIdTextChatSessionsRunIdMessagesPostError = AppendTextChatMessageApiV1WorkflowWorkflowIdTextChatSessionsRunIdMessagesPostErrors[keyof AppendTextChatMessageApiV1WorkflowWorkflowIdTextChatSessionsRunIdMessagesPostErrors];
+
+export type AppendTextChatMessageApiV1WorkflowWorkflowIdTextChatSessionsRunIdMessagesPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: WorkflowRunTextSessionResponse;
+};
+
+export type AppendTextChatMessageApiV1WorkflowWorkflowIdTextChatSessionsRunIdMessagesPostResponse = AppendTextChatMessageApiV1WorkflowWorkflowIdTextChatSessionsRunIdMessagesPostResponses[keyof AppendTextChatMessageApiV1WorkflowWorkflowIdTextChatSessionsRunIdMessagesPostResponses];
+
+export type RewindTextChatSessionApiV1WorkflowWorkflowIdTextChatSessionsRunIdRewindPostData = {
+    body: RewindTextChatSessionRequest;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path: {
+        /**
+         * Workflow Id
+         */
+        workflow_id: number;
+        /**
+         * Run Id
+         */
+        run_id: number;
+    };
+    query?: never;
+    url: '/api/v1/workflow/{workflow_id}/text-chat/sessions/{run_id}/rewind';
+};
+
+export type RewindTextChatSessionApiV1WorkflowWorkflowIdTextChatSessionsRunIdRewindPostErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RewindTextChatSessionApiV1WorkflowWorkflowIdTextChatSessionsRunIdRewindPostError = RewindTextChatSessionApiV1WorkflowWorkflowIdTextChatSessionsRunIdRewindPostErrors[keyof RewindTextChatSessionApiV1WorkflowWorkflowIdTextChatSessionsRunIdRewindPostErrors];
+
+export type RewindTextChatSessionApiV1WorkflowWorkflowIdTextChatSessionsRunIdRewindPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: WorkflowRunTextSessionResponse;
+};
+
+export type RewindTextChatSessionApiV1WorkflowWorkflowIdTextChatSessionsRunIdRewindPostResponse = RewindTextChatSessionApiV1WorkflowWorkflowIdTextChatSessionsRunIdRewindPostResponses[keyof RewindTextChatSessionApiV1WorkflowWorkflowIdTextChatSessionsRunIdRewindPostResponses];
+
 export type GetDefaultConfigurationsApiV1UserConfigurationsDefaultsGetData = {
     body?: never;
     path?: never;
@@ -6484,6 +8898,84 @@ export type UpdateUserConfigurationsApiV1UserConfigurationsUserPutResponses = {
 };
 
 export type UpdateUserConfigurationsApiV1UserConfigurationsUserPutResponse = UpdateUserConfigurationsApiV1UserConfigurationsUserPutResponses[keyof UpdateUserConfigurationsApiV1UserConfigurationsUserPutResponses];
+
+export type GetUserOnboardingStateApiV1UserOnboardingStateGetData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/user/onboarding-state';
+};
+
+export type GetUserOnboardingStateApiV1UserOnboardingStateGetErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetUserOnboardingStateApiV1UserOnboardingStateGetError = GetUserOnboardingStateApiV1UserOnboardingStateGetErrors[keyof GetUserOnboardingStateApiV1UserOnboardingStateGetErrors];
+
+export type GetUserOnboardingStateApiV1UserOnboardingStateGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: OnboardingState;
+};
+
+export type GetUserOnboardingStateApiV1UserOnboardingStateGetResponse = GetUserOnboardingStateApiV1UserOnboardingStateGetResponses[keyof GetUserOnboardingStateApiV1UserOnboardingStateGetResponses];
+
+export type UpdateUserOnboardingStateApiV1UserOnboardingStatePutData = {
+    body: OnboardingStateUpdate;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/user/onboarding-state';
+};
+
+export type UpdateUserOnboardingStateApiV1UserOnboardingStatePutErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdateUserOnboardingStateApiV1UserOnboardingStatePutError = UpdateUserOnboardingStateApiV1UserOnboardingStatePutErrors[keyof UpdateUserOnboardingStateApiV1UserOnboardingStatePutErrors];
+
+export type UpdateUserOnboardingStateApiV1UserOnboardingStatePutResponses = {
+    /**
+     * Successful Response
+     */
+    200: OnboardingState;
+};
+
+export type UpdateUserOnboardingStateApiV1UserOnboardingStatePutResponse = UpdateUserOnboardingStateApiV1UserOnboardingStatePutResponses[keyof UpdateUserOnboardingStateApiV1UserOnboardingStatePutResponses];
 
 export type ValidateUserConfigurationsApiV1UserConfigurationsUserValidateGetData = {
     body?: never;
@@ -6737,6 +9229,18 @@ export type GetVoicesApiV1UserConfigurationsVoicesProviderGetData = {
          * Language
          */
         language?: string | null;
+        /**
+         * Q
+         */
+        q?: string | null;
+        /**
+         * Gender
+         */
+        gender?: string | null;
+        /**
+         * Accent
+         */
+        accent?: string | null;
     };
     url: '/api/v1/user/configurations/voices/{provider}';
 };
@@ -7760,6 +10264,50 @@ export type UpdateToolApiV1ToolsToolUuidPutResponses = {
 
 export type UpdateToolApiV1ToolsToolUuidPutResponse = UpdateToolApiV1ToolsToolUuidPutResponses[keyof UpdateToolApiV1ToolsToolUuidPutResponses];
 
+export type RefreshMcpToolsApiV1ToolsToolUuidMcpRefreshPostData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path: {
+        /**
+         * Tool Uuid
+         */
+        tool_uuid: string;
+    };
+    query?: never;
+    url: '/api/v1/tools/{tool_uuid}/mcp/refresh';
+};
+
+export type RefreshMcpToolsApiV1ToolsToolUuidMcpRefreshPostErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RefreshMcpToolsApiV1ToolsToolUuidMcpRefreshPostError = RefreshMcpToolsApiV1ToolsToolUuidMcpRefreshPostErrors[keyof RefreshMcpToolsApiV1ToolsToolUuidMcpRefreshPostErrors];
+
+export type RefreshMcpToolsApiV1ToolsToolUuidMcpRefreshPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: McpRefreshResponse;
+};
+
+export type RefreshMcpToolsApiV1ToolsToolUuidMcpRefreshPostResponse = RefreshMcpToolsApiV1ToolsToolUuidMcpRefreshPostResponses[keyof RefreshMcpToolsApiV1ToolsToolUuidMcpRefreshPostResponses];
+
 export type UnarchiveToolApiV1ToolsToolUuidUnarchivePostData = {
     body?: never;
     headers?: {
@@ -7804,7 +10352,7 @@ export type UnarchiveToolApiV1ToolsToolUuidUnarchivePostResponses = {
 
 export type UnarchiveToolApiV1ToolsToolUuidUnarchivePostResponse = UnarchiveToolApiV1ToolsToolUuidUnarchivePostResponses[keyof UnarchiveToolApiV1ToolsToolUuidUnarchivePostResponses];
 
-export type GetIntegrationsApiV1IntegrationGetData = {
+export type GetCurrentOrganizationContextApiV1OrganizationsContextGetData = {
     body?: never;
     headers?: {
         /**
@@ -7818,10 +10366,10 @@ export type GetIntegrationsApiV1IntegrationGetData = {
     };
     path?: never;
     query?: never;
-    url: '/api/v1/integration/';
+    url: '/api/v1/organizations/context';
 };
 
-export type GetIntegrationsApiV1IntegrationGetErrors = {
+export type GetCurrentOrganizationContextApiV1OrganizationsContextGetErrors = {
     /**
      * Not found
      */
@@ -7832,145 +10380,16 @@ export type GetIntegrationsApiV1IntegrationGetErrors = {
     422: HttpValidationError;
 };
 
-export type GetIntegrationsApiV1IntegrationGetError = GetIntegrationsApiV1IntegrationGetErrors[keyof GetIntegrationsApiV1IntegrationGetErrors];
+export type GetCurrentOrganizationContextApiV1OrganizationsContextGetError = GetCurrentOrganizationContextApiV1OrganizationsContextGetErrors[keyof GetCurrentOrganizationContextApiV1OrganizationsContextGetErrors];
 
-export type GetIntegrationsApiV1IntegrationGetResponses = {
-    /**
-     * Response Get Integrations Api V1 Integration  Get
-     *
-     * Successful Response
-     */
-    200: Array<IntegrationResponse>;
-};
-
-export type GetIntegrationsApiV1IntegrationGetResponse = GetIntegrationsApiV1IntegrationGetResponses[keyof GetIntegrationsApiV1IntegrationGetResponses];
-
-export type CreateSessionApiV1IntegrationSessionPostData = {
-    body?: never;
-    headers?: {
-        /**
-         * Authorization
-         */
-        authorization?: string | null;
-        /**
-         * X-Api-Key
-         */
-        'X-API-Key'?: string | null;
-    };
-    path?: never;
-    query?: never;
-    url: '/api/v1/integration/session';
-};
-
-export type CreateSessionApiV1IntegrationSessionPostErrors = {
-    /**
-     * Not found
-     */
-    404: unknown;
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type CreateSessionApiV1IntegrationSessionPostError = CreateSessionApiV1IntegrationSessionPostErrors[keyof CreateSessionApiV1IntegrationSessionPostErrors];
-
-export type CreateSessionApiV1IntegrationSessionPostResponses = {
+export type GetCurrentOrganizationContextApiV1OrganizationsContextGetResponses = {
     /**
      * Successful Response
      */
-    200: SessionResponse;
+    200: OrganizationContextResponse;
 };
 
-export type CreateSessionApiV1IntegrationSessionPostResponse = CreateSessionApiV1IntegrationSessionPostResponses[keyof CreateSessionApiV1IntegrationSessionPostResponses];
-
-export type UpdateIntegrationApiV1IntegrationIntegrationIdPutData = {
-    body: UpdateIntegrationRequest;
-    headers?: {
-        /**
-         * Authorization
-         */
-        authorization?: string | null;
-        /**
-         * X-Api-Key
-         */
-        'X-API-Key'?: string | null;
-    };
-    path: {
-        /**
-         * Integration Id
-         */
-        integration_id: number;
-    };
-    query?: never;
-    url: '/api/v1/integration/{integration_id}';
-};
-
-export type UpdateIntegrationApiV1IntegrationIntegrationIdPutErrors = {
-    /**
-     * Not found
-     */
-    404: unknown;
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type UpdateIntegrationApiV1IntegrationIntegrationIdPutError = UpdateIntegrationApiV1IntegrationIntegrationIdPutErrors[keyof UpdateIntegrationApiV1IntegrationIntegrationIdPutErrors];
-
-export type UpdateIntegrationApiV1IntegrationIntegrationIdPutResponses = {
-    /**
-     * Successful Response
-     */
-    200: IntegrationResponse;
-};
-
-export type UpdateIntegrationApiV1IntegrationIntegrationIdPutResponse = UpdateIntegrationApiV1IntegrationIntegrationIdPutResponses[keyof UpdateIntegrationApiV1IntegrationIntegrationIdPutResponses];
-
-export type GetIntegrationAccessTokenApiV1IntegrationIntegrationIdAccessTokenGetData = {
-    body?: never;
-    headers?: {
-        /**
-         * Authorization
-         */
-        authorization?: string | null;
-        /**
-         * X-Api-Key
-         */
-        'X-API-Key'?: string | null;
-    };
-    path: {
-        /**
-         * Integration Id
-         */
-        integration_id: number;
-    };
-    query?: never;
-    url: '/api/v1/integration/{integration_id}/access-token';
-};
-
-export type GetIntegrationAccessTokenApiV1IntegrationIntegrationIdAccessTokenGetErrors = {
-    /**
-     * Not found
-     */
-    404: unknown;
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GetIntegrationAccessTokenApiV1IntegrationIntegrationIdAccessTokenGetError = GetIntegrationAccessTokenApiV1IntegrationIntegrationIdAccessTokenGetErrors[keyof GetIntegrationAccessTokenApiV1IntegrationIntegrationIdAccessTokenGetErrors];
-
-export type GetIntegrationAccessTokenApiV1IntegrationIntegrationIdAccessTokenGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: AccessTokenResponse;
-};
-
-export type GetIntegrationAccessTokenApiV1IntegrationIntegrationIdAccessTokenGetResponse = GetIntegrationAccessTokenApiV1IntegrationIntegrationIdAccessTokenGetResponses[keyof GetIntegrationAccessTokenApiV1IntegrationIntegrationIdAccessTokenGetResponses];
+export type GetCurrentOrganizationContextApiV1OrganizationsContextGetResponse = GetCurrentOrganizationContextApiV1OrganizationsContextGetResponses[keyof GetCurrentOrganizationContextApiV1OrganizationsContextGetResponses];
 
 export type GetTelephonyProvidersMetadataApiV1OrganizationsTelephonyProvidersMetadataGetData = {
     body?: never;
@@ -8049,6 +10468,280 @@ export type GetTelephonyConfigWarningsApiV1OrganizationsTelephonyConfigWarningsG
 };
 
 export type GetTelephonyConfigWarningsApiV1OrganizationsTelephonyConfigWarningsGetResponse = GetTelephonyConfigWarningsApiV1OrganizationsTelephonyConfigWarningsGetResponses[keyof GetTelephonyConfigWarningsApiV1OrganizationsTelephonyConfigWarningsGetResponses];
+
+export type GetModelConfigurationV2DefaultsApiV1OrganizationsModelConfigurationsV2DefaultsGetData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/organizations/model-configurations/v2/defaults';
+};
+
+export type GetModelConfigurationV2DefaultsApiV1OrganizationsModelConfigurationsV2DefaultsGetErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetModelConfigurationV2DefaultsApiV1OrganizationsModelConfigurationsV2DefaultsGetError = GetModelConfigurationV2DefaultsApiV1OrganizationsModelConfigurationsV2DefaultsGetErrors[keyof GetModelConfigurationV2DefaultsApiV1OrganizationsModelConfigurationsV2DefaultsGetErrors];
+
+export type GetModelConfigurationV2DefaultsApiV1OrganizationsModelConfigurationsV2DefaultsGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type GetModelConfigurationV2ApiV1OrganizationsModelConfigurationsV2GetData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/organizations/model-configurations/v2';
+};
+
+export type GetModelConfigurationV2ApiV1OrganizationsModelConfigurationsV2GetErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetModelConfigurationV2ApiV1OrganizationsModelConfigurationsV2GetError = GetModelConfigurationV2ApiV1OrganizationsModelConfigurationsV2GetErrors[keyof GetModelConfigurationV2ApiV1OrganizationsModelConfigurationsV2GetErrors];
+
+export type GetModelConfigurationV2ApiV1OrganizationsModelConfigurationsV2GetResponses = {
+    /**
+     * Successful Response
+     */
+    200: OrganizationAiModelConfigurationResponse;
+};
+
+export type GetModelConfigurationV2ApiV1OrganizationsModelConfigurationsV2GetResponse = GetModelConfigurationV2ApiV1OrganizationsModelConfigurationsV2GetResponses[keyof GetModelConfigurationV2ApiV1OrganizationsModelConfigurationsV2GetResponses];
+
+export type SaveModelConfigurationV2ApiV1OrganizationsModelConfigurationsV2PutData = {
+    body: OrganizationAiModelConfigurationV2;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/organizations/model-configurations/v2';
+};
+
+export type SaveModelConfigurationV2ApiV1OrganizationsModelConfigurationsV2PutErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SaveModelConfigurationV2ApiV1OrganizationsModelConfigurationsV2PutError = SaveModelConfigurationV2ApiV1OrganizationsModelConfigurationsV2PutErrors[keyof SaveModelConfigurationV2ApiV1OrganizationsModelConfigurationsV2PutErrors];
+
+export type SaveModelConfigurationV2ApiV1OrganizationsModelConfigurationsV2PutResponses = {
+    /**
+     * Successful Response
+     */
+    200: OrganizationAiModelConfigurationResponse;
+};
+
+export type SaveModelConfigurationV2ApiV1OrganizationsModelConfigurationsV2PutResponse = SaveModelConfigurationV2ApiV1OrganizationsModelConfigurationsV2PutResponses[keyof SaveModelConfigurationV2ApiV1OrganizationsModelConfigurationsV2PutResponses];
+
+export type PreviewModelConfigurationV2MigrationApiV1OrganizationsModelConfigurationsV2MigrationPreviewGetData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/organizations/model-configurations/v2/migration-preview';
+};
+
+export type PreviewModelConfigurationV2MigrationApiV1OrganizationsModelConfigurationsV2MigrationPreviewGetErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PreviewModelConfigurationV2MigrationApiV1OrganizationsModelConfigurationsV2MigrationPreviewGetError = PreviewModelConfigurationV2MigrationApiV1OrganizationsModelConfigurationsV2MigrationPreviewGetErrors[keyof PreviewModelConfigurationV2MigrationApiV1OrganizationsModelConfigurationsV2MigrationPreviewGetErrors];
+
+export type PreviewModelConfigurationV2MigrationApiV1OrganizationsModelConfigurationsV2MigrationPreviewGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type MigrateModelConfigurationV2ApiV1OrganizationsModelConfigurationsV2MigratePostData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: {
+        /**
+         * Force
+         */
+        force?: boolean;
+    };
+    url: '/api/v1/organizations/model-configurations/v2/migrate';
+};
+
+export type MigrateModelConfigurationV2ApiV1OrganizationsModelConfigurationsV2MigratePostErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type MigrateModelConfigurationV2ApiV1OrganizationsModelConfigurationsV2MigratePostError = MigrateModelConfigurationV2ApiV1OrganizationsModelConfigurationsV2MigratePostErrors[keyof MigrateModelConfigurationV2ApiV1OrganizationsModelConfigurationsV2MigratePostErrors];
+
+export type MigrateModelConfigurationV2ApiV1OrganizationsModelConfigurationsV2MigratePostResponses = {
+    /**
+     * Successful Response
+     */
+    200: OrganizationAiModelConfigurationResponse;
+};
+
+export type MigrateModelConfigurationV2ApiV1OrganizationsModelConfigurationsV2MigratePostResponse = MigrateModelConfigurationV2ApiV1OrganizationsModelConfigurationsV2MigratePostResponses[keyof MigrateModelConfigurationV2ApiV1OrganizationsModelConfigurationsV2MigratePostResponses];
+
+export type GetPreferencesApiV1OrganizationsPreferencesGetData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/organizations/preferences';
+};
+
+export type GetPreferencesApiV1OrganizationsPreferencesGetErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetPreferencesApiV1OrganizationsPreferencesGetError = GetPreferencesApiV1OrganizationsPreferencesGetErrors[keyof GetPreferencesApiV1OrganizationsPreferencesGetErrors];
+
+export type GetPreferencesApiV1OrganizationsPreferencesGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: OrganizationPreferences;
+};
+
+export type GetPreferencesApiV1OrganizationsPreferencesGetResponse = GetPreferencesApiV1OrganizationsPreferencesGetResponses[keyof GetPreferencesApiV1OrganizationsPreferencesGetResponses];
+
+export type SavePreferencesApiV1OrganizationsPreferencesPutData = {
+    body: OrganizationPreferences;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/organizations/preferences';
+};
+
+export type SavePreferencesApiV1OrganizationsPreferencesPutErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SavePreferencesApiV1OrganizationsPreferencesPutError = SavePreferencesApiV1OrganizationsPreferencesPutErrors[keyof SavePreferencesApiV1OrganizationsPreferencesPutErrors];
+
+export type SavePreferencesApiV1OrganizationsPreferencesPutResponses = {
+    /**
+     * Successful Response
+     */
+    200: OrganizationPreferences;
+};
+
+export type SavePreferencesApiV1OrganizationsPreferencesPutResponse = SavePreferencesApiV1OrganizationsPreferencesPutResponses[keyof SavePreferencesApiV1OrganizationsPreferencesPutResponses];
 
 export type ListTelephonyConfigurationsApiV1OrganizationsTelephonyConfigsGetData = {
     body?: never;
@@ -9139,397 +11832,6 @@ export type ReactivateServiceKeyApiV1UserServiceKeysServiceKeyIdReactivatePutRes
     200: unknown;
 };
 
-export type ListTestSessionsApiV1LooptalkTestSessionsGetData = {
-    body?: never;
-    headers?: {
-        /**
-         * Authorization
-         */
-        authorization?: string | null;
-        /**
-         * X-Api-Key
-         */
-        'X-API-Key'?: string | null;
-    };
-    path?: never;
-    query?: {
-        /**
-         * Status
-         */
-        status?: string | null;
-        /**
-         * Load Test Group Id
-         */
-        load_test_group_id?: string | null;
-        /**
-         * Limit
-         */
-        limit?: number;
-        /**
-         * Offset
-         */
-        offset?: number;
-    };
-    url: '/api/v1/looptalk/test-sessions';
-};
-
-export type ListTestSessionsApiV1LooptalkTestSessionsGetErrors = {
-    /**
-     * Not found
-     */
-    404: unknown;
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type ListTestSessionsApiV1LooptalkTestSessionsGetError = ListTestSessionsApiV1LooptalkTestSessionsGetErrors[keyof ListTestSessionsApiV1LooptalkTestSessionsGetErrors];
-
-export type ListTestSessionsApiV1LooptalkTestSessionsGetResponses = {
-    /**
-     * Response List Test Sessions Api V1 Looptalk Test Sessions Get
-     *
-     * Successful Response
-     */
-    200: Array<TestSessionResponse>;
-};
-
-export type ListTestSessionsApiV1LooptalkTestSessionsGetResponse = ListTestSessionsApiV1LooptalkTestSessionsGetResponses[keyof ListTestSessionsApiV1LooptalkTestSessionsGetResponses];
-
-export type CreateTestSessionApiV1LooptalkTestSessionsPostData = {
-    body: CreateTestSessionRequest;
-    headers?: {
-        /**
-         * Authorization
-         */
-        authorization?: string | null;
-        /**
-         * X-Api-Key
-         */
-        'X-API-Key'?: string | null;
-    };
-    path?: never;
-    query?: never;
-    url: '/api/v1/looptalk/test-sessions';
-};
-
-export type CreateTestSessionApiV1LooptalkTestSessionsPostErrors = {
-    /**
-     * Not found
-     */
-    404: unknown;
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type CreateTestSessionApiV1LooptalkTestSessionsPostError = CreateTestSessionApiV1LooptalkTestSessionsPostErrors[keyof CreateTestSessionApiV1LooptalkTestSessionsPostErrors];
-
-export type CreateTestSessionApiV1LooptalkTestSessionsPostResponses = {
-    /**
-     * Successful Response
-     */
-    200: TestSessionResponse;
-};
-
-export type CreateTestSessionApiV1LooptalkTestSessionsPostResponse = CreateTestSessionApiV1LooptalkTestSessionsPostResponses[keyof CreateTestSessionApiV1LooptalkTestSessionsPostResponses];
-
-export type GetTestSessionApiV1LooptalkTestSessionsTestSessionIdGetData = {
-    body?: never;
-    headers?: {
-        /**
-         * Authorization
-         */
-        authorization?: string | null;
-        /**
-         * X-Api-Key
-         */
-        'X-API-Key'?: string | null;
-    };
-    path: {
-        /**
-         * Test Session Id
-         */
-        test_session_id: number;
-    };
-    query?: never;
-    url: '/api/v1/looptalk/test-sessions/{test_session_id}';
-};
-
-export type GetTestSessionApiV1LooptalkTestSessionsTestSessionIdGetErrors = {
-    /**
-     * Not found
-     */
-    404: unknown;
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GetTestSessionApiV1LooptalkTestSessionsTestSessionIdGetError = GetTestSessionApiV1LooptalkTestSessionsTestSessionIdGetErrors[keyof GetTestSessionApiV1LooptalkTestSessionsTestSessionIdGetErrors];
-
-export type GetTestSessionApiV1LooptalkTestSessionsTestSessionIdGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: TestSessionResponse;
-};
-
-export type GetTestSessionApiV1LooptalkTestSessionsTestSessionIdGetResponse = GetTestSessionApiV1LooptalkTestSessionsTestSessionIdGetResponses[keyof GetTestSessionApiV1LooptalkTestSessionsTestSessionIdGetResponses];
-
-export type StartTestSessionApiV1LooptalkTestSessionsTestSessionIdStartPostData = {
-    body?: never;
-    headers?: {
-        /**
-         * Authorization
-         */
-        authorization?: string | null;
-        /**
-         * X-Api-Key
-         */
-        'X-API-Key'?: string | null;
-    };
-    path: {
-        /**
-         * Test Session Id
-         */
-        test_session_id: number;
-    };
-    query?: never;
-    url: '/api/v1/looptalk/test-sessions/{test_session_id}/start';
-};
-
-export type StartTestSessionApiV1LooptalkTestSessionsTestSessionIdStartPostErrors = {
-    /**
-     * Not found
-     */
-    404: unknown;
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type StartTestSessionApiV1LooptalkTestSessionsTestSessionIdStartPostError = StartTestSessionApiV1LooptalkTestSessionsTestSessionIdStartPostErrors[keyof StartTestSessionApiV1LooptalkTestSessionsTestSessionIdStartPostErrors];
-
-export type StartTestSessionApiV1LooptalkTestSessionsTestSessionIdStartPostResponses = {
-    /**
-     * Successful Response
-     */
-    200: unknown;
-};
-
-export type StopTestSessionApiV1LooptalkTestSessionsTestSessionIdStopPostData = {
-    body?: never;
-    headers?: {
-        /**
-         * Authorization
-         */
-        authorization?: string | null;
-        /**
-         * X-Api-Key
-         */
-        'X-API-Key'?: string | null;
-    };
-    path: {
-        /**
-         * Test Session Id
-         */
-        test_session_id: number;
-    };
-    query?: never;
-    url: '/api/v1/looptalk/test-sessions/{test_session_id}/stop';
-};
-
-export type StopTestSessionApiV1LooptalkTestSessionsTestSessionIdStopPostErrors = {
-    /**
-     * Not found
-     */
-    404: unknown;
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type StopTestSessionApiV1LooptalkTestSessionsTestSessionIdStopPostError = StopTestSessionApiV1LooptalkTestSessionsTestSessionIdStopPostErrors[keyof StopTestSessionApiV1LooptalkTestSessionsTestSessionIdStopPostErrors];
-
-export type StopTestSessionApiV1LooptalkTestSessionsTestSessionIdStopPostResponses = {
-    /**
-     * Successful Response
-     */
-    200: unknown;
-};
-
-export type GetTestSessionConversationApiV1LooptalkTestSessionsTestSessionIdConversationGetData = {
-    body?: never;
-    headers?: {
-        /**
-         * Authorization
-         */
-        authorization?: string | null;
-        /**
-         * X-Api-Key
-         */
-        'X-API-Key'?: string | null;
-    };
-    path: {
-        /**
-         * Test Session Id
-         */
-        test_session_id: number;
-    };
-    query?: never;
-    url: '/api/v1/looptalk/test-sessions/{test_session_id}/conversation';
-};
-
-export type GetTestSessionConversationApiV1LooptalkTestSessionsTestSessionIdConversationGetErrors = {
-    /**
-     * Not found
-     */
-    404: unknown;
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GetTestSessionConversationApiV1LooptalkTestSessionsTestSessionIdConversationGetError = GetTestSessionConversationApiV1LooptalkTestSessionsTestSessionIdConversationGetErrors[keyof GetTestSessionConversationApiV1LooptalkTestSessionsTestSessionIdConversationGetErrors];
-
-export type GetTestSessionConversationApiV1LooptalkTestSessionsTestSessionIdConversationGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: unknown;
-};
-
-export type CreateLoadTestApiV1LooptalkLoadTestsPostData = {
-    body: CreateLoadTestRequest;
-    headers?: {
-        /**
-         * Authorization
-         */
-        authorization?: string | null;
-        /**
-         * X-Api-Key
-         */
-        'X-API-Key'?: string | null;
-    };
-    path?: never;
-    query?: never;
-    url: '/api/v1/looptalk/load-tests';
-};
-
-export type CreateLoadTestApiV1LooptalkLoadTestsPostErrors = {
-    /**
-     * Not found
-     */
-    404: unknown;
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type CreateLoadTestApiV1LooptalkLoadTestsPostError = CreateLoadTestApiV1LooptalkLoadTestsPostErrors[keyof CreateLoadTestApiV1LooptalkLoadTestsPostErrors];
-
-export type CreateLoadTestApiV1LooptalkLoadTestsPostResponses = {
-    /**
-     * Response Create Load Test Api V1 Looptalk Load Tests Post
-     *
-     * Successful Response
-     */
-    200: {
-        [key: string]: unknown;
-    };
-};
-
-export type CreateLoadTestApiV1LooptalkLoadTestsPostResponse = CreateLoadTestApiV1LooptalkLoadTestsPostResponses[keyof CreateLoadTestApiV1LooptalkLoadTestsPostResponses];
-
-export type GetLoadTestStatsApiV1LooptalkLoadTestsLoadTestGroupIdStatsGetData = {
-    body?: never;
-    headers?: {
-        /**
-         * Authorization
-         */
-        authorization?: string | null;
-        /**
-         * X-Api-Key
-         */
-        'X-API-Key'?: string | null;
-    };
-    path: {
-        /**
-         * Load Test Group Id
-         */
-        load_test_group_id: string;
-    };
-    query?: never;
-    url: '/api/v1/looptalk/load-tests/{load_test_group_id}/stats';
-};
-
-export type GetLoadTestStatsApiV1LooptalkLoadTestsLoadTestGroupIdStatsGetErrors = {
-    /**
-     * Not found
-     */
-    404: unknown;
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GetLoadTestStatsApiV1LooptalkLoadTestsLoadTestGroupIdStatsGetError = GetLoadTestStatsApiV1LooptalkLoadTestsLoadTestGroupIdStatsGetErrors[keyof GetLoadTestStatsApiV1LooptalkLoadTestsLoadTestGroupIdStatsGetErrors];
-
-export type GetLoadTestStatsApiV1LooptalkLoadTestsLoadTestGroupIdStatsGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: LoadTestStatsResponse;
-};
-
-export type GetLoadTestStatsApiV1LooptalkLoadTestsLoadTestGroupIdStatsGetResponse = GetLoadTestStatsApiV1LooptalkLoadTestsLoadTestGroupIdStatsGetResponses[keyof GetLoadTestStatsApiV1LooptalkLoadTestsLoadTestGroupIdStatsGetResponses];
-
-export type GetActiveTestsApiV1LooptalkActiveTestsGetData = {
-    body?: never;
-    headers?: {
-        /**
-         * Authorization
-         */
-        authorization?: string | null;
-        /**
-         * X-Api-Key
-         */
-        'X-API-Key'?: string | null;
-    };
-    path?: never;
-    query?: never;
-    url: '/api/v1/looptalk/active-tests';
-};
-
-export type GetActiveTestsApiV1LooptalkActiveTestsGetErrors = {
-    /**
-     * Not found
-     */
-    404: unknown;
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GetActiveTestsApiV1LooptalkActiveTestsGetError = GetActiveTestsApiV1LooptalkActiveTestsGetErrors[keyof GetActiveTestsApiV1LooptalkActiveTestsGetErrors];
-
-export type GetActiveTestsApiV1LooptalkActiveTestsGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: unknown;
-};
-
 export type GetCurrentPeriodUsageApiV1OrganizationsUsageCurrentPeriodGetData = {
     body?: never;
     headers?: {
@@ -9607,6 +11909,93 @@ export type GetMpsCreditsApiV1OrganizationsUsageMpsCreditsGetResponses = {
 };
 
 export type GetMpsCreditsApiV1OrganizationsUsageMpsCreditsGetResponse = GetMpsCreditsApiV1OrganizationsUsageMpsCreditsGetResponses[keyof GetMpsCreditsApiV1OrganizationsUsageMpsCreditsGetResponses];
+
+export type GetBillingCreditsApiV1OrganizationsBillingCreditsGetData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: {
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Limit
+         */
+        limit?: number;
+    };
+    url: '/api/v1/organizations/billing/credits';
+};
+
+export type GetBillingCreditsApiV1OrganizationsBillingCreditsGetErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetBillingCreditsApiV1OrganizationsBillingCreditsGetError = GetBillingCreditsApiV1OrganizationsBillingCreditsGetErrors[keyof GetBillingCreditsApiV1OrganizationsBillingCreditsGetErrors];
+
+export type GetBillingCreditsApiV1OrganizationsBillingCreditsGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: MpsBillingCreditsResponse;
+};
+
+export type GetBillingCreditsApiV1OrganizationsBillingCreditsGetResponse = GetBillingCreditsApiV1OrganizationsBillingCreditsGetResponses[keyof GetBillingCreditsApiV1OrganizationsBillingCreditsGetResponses];
+
+export type CreateMpsCreditPurchaseUrlApiV1OrganizationsUsageMpsCreditsPurchaseUrlPostData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/organizations/usage/mps-credits/purchase-url';
+};
+
+export type CreateMpsCreditPurchaseUrlApiV1OrganizationsUsageMpsCreditsPurchaseUrlPostErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateMpsCreditPurchaseUrlApiV1OrganizationsUsageMpsCreditsPurchaseUrlPostError = CreateMpsCreditPurchaseUrlApiV1OrganizationsUsageMpsCreditsPurchaseUrlPostErrors[keyof CreateMpsCreditPurchaseUrlApiV1OrganizationsUsageMpsCreditsPurchaseUrlPostErrors];
+
+export type CreateMpsCreditPurchaseUrlApiV1OrganizationsUsageMpsCreditsPurchaseUrlPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: MpsCreditPurchaseUrlResponse;
+};
+
+export type CreateMpsCreditPurchaseUrlApiV1OrganizationsUsageMpsCreditsPurchaseUrlPostResponse = CreateMpsCreditPurchaseUrlApiV1OrganizationsUsageMpsCreditsPurchaseUrlPostResponses[keyof CreateMpsCreditPurchaseUrlApiV1OrganizationsUsageMpsCreditsPurchaseUrlPostResponses];
 
 export type GetUsageHistoryApiV1OrganizationsUsageRunsGetData = {
     body?: never;
@@ -10100,7 +12489,7 @@ export type GetEmbedConfigApiV1PublicEmbedConfigTokenGetResponses = {
 
 export type GetEmbedConfigApiV1PublicEmbedConfigTokenGetResponse = GetEmbedConfigApiV1PublicEmbedConfigTokenGetResponses[keyof GetEmbedConfigApiV1PublicEmbedConfigTokenGetResponses];
 
-export type OptionsConfigApiV1PublicEmbedConfigTokenOptionsData = {
+export type OptionsEmbedConfigApiV1PublicEmbedConfigTokenOptionsData = {
     body?: never;
     path: {
         /**
@@ -10112,7 +12501,7 @@ export type OptionsConfigApiV1PublicEmbedConfigTokenOptionsData = {
     url: '/api/v1/public/embed/config/{token}';
 };
 
-export type OptionsConfigApiV1PublicEmbedConfigTokenOptionsErrors = {
+export type OptionsEmbedConfigApiV1PublicEmbedConfigTokenOptionsErrors = {
     /**
      * Not found
      */
@@ -10123,9 +12512,9 @@ export type OptionsConfigApiV1PublicEmbedConfigTokenOptionsErrors = {
     422: HttpValidationError;
 };
 
-export type OptionsConfigApiV1PublicEmbedConfigTokenOptionsError = OptionsConfigApiV1PublicEmbedConfigTokenOptionsErrors[keyof OptionsConfigApiV1PublicEmbedConfigTokenOptionsErrors];
+export type OptionsEmbedConfigApiV1PublicEmbedConfigTokenOptionsError = OptionsEmbedConfigApiV1PublicEmbedConfigTokenOptionsErrors[keyof OptionsEmbedConfigApiV1PublicEmbedConfigTokenOptionsErrors];
 
-export type OptionsConfigApiV1PublicEmbedConfigTokenOptionsResponses = {
+export type OptionsEmbedConfigApiV1PublicEmbedConfigTokenOptionsResponses = {
     /**
      * Successful Response
      */
@@ -10278,6 +12667,86 @@ export type InitiateCallTestApiV1PublicAgentTestUuidPostResponses = {
 
 export type InitiateCallTestApiV1PublicAgentTestUuidPostResponse = InitiateCallTestApiV1PublicAgentTestUuidPostResponses[keyof InitiateCallTestApiV1PublicAgentTestUuidPostResponses];
 
+export type InitiateCallByWorkflowUuidApiV1PublicAgentWorkflowWorkflowUuidPostData = {
+    body: TriggerCallRequest;
+    headers: {
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key': string;
+    };
+    path: {
+        /**
+         * Workflow Uuid
+         */
+        workflow_uuid: string;
+    };
+    query?: never;
+    url: '/api/v1/public/agent/workflow/{workflow_uuid}';
+};
+
+export type InitiateCallByWorkflowUuidApiV1PublicAgentWorkflowWorkflowUuidPostErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type InitiateCallByWorkflowUuidApiV1PublicAgentWorkflowWorkflowUuidPostError = InitiateCallByWorkflowUuidApiV1PublicAgentWorkflowWorkflowUuidPostErrors[keyof InitiateCallByWorkflowUuidApiV1PublicAgentWorkflowWorkflowUuidPostErrors];
+
+export type InitiateCallByWorkflowUuidApiV1PublicAgentWorkflowWorkflowUuidPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: TriggerCallResponse;
+};
+
+export type InitiateCallByWorkflowUuidApiV1PublicAgentWorkflowWorkflowUuidPostResponse = InitiateCallByWorkflowUuidApiV1PublicAgentWorkflowWorkflowUuidPostResponses[keyof InitiateCallByWorkflowUuidApiV1PublicAgentWorkflowWorkflowUuidPostResponses];
+
+export type InitiateCallTestByWorkflowUuidApiV1PublicAgentTestWorkflowWorkflowUuidPostData = {
+    body: TriggerCallRequest;
+    headers: {
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key': string;
+    };
+    path: {
+        /**
+         * Workflow Uuid
+         */
+        workflow_uuid: string;
+    };
+    query?: never;
+    url: '/api/v1/public/agent/test/workflow/{workflow_uuid}';
+};
+
+export type InitiateCallTestByWorkflowUuidApiV1PublicAgentTestWorkflowWorkflowUuidPostErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type InitiateCallTestByWorkflowUuidApiV1PublicAgentTestWorkflowWorkflowUuidPostError = InitiateCallTestByWorkflowUuidApiV1PublicAgentTestWorkflowWorkflowUuidPostErrors[keyof InitiateCallTestByWorkflowUuidApiV1PublicAgentTestWorkflowWorkflowUuidPostErrors];
+
+export type InitiateCallTestByWorkflowUuidApiV1PublicAgentTestWorkflowWorkflowUuidPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: TriggerCallResponse;
+};
+
+export type InitiateCallTestByWorkflowUuidApiV1PublicAgentTestWorkflowWorkflowUuidPostResponse = InitiateCallTestByWorkflowUuidApiV1PublicAgentTestWorkflowWorkflowUuidPostResponses[keyof InitiateCallTestByWorkflowUuidApiV1PublicAgentTestWorkflowWorkflowUuidPostResponses];
+
 export type DownloadWorkflowArtifactApiV1PublicDownloadWorkflowTokenArtifactTypeGetData = {
     body?: never;
     path: {
@@ -10288,7 +12757,7 @@ export type DownloadWorkflowArtifactApiV1PublicDownloadWorkflowTokenArtifactType
         /**
          * Artifact Type
          */
-        artifact_type: 'recording' | 'transcript';
+        artifact_type: string;
     };
     query?: {
         /**
@@ -10980,6 +13449,178 @@ export type TranscribeAudioApiV1WorkflowRecordingsTranscribePostResponses = {
      */
     200: unknown;
 };
+
+export type ListFoldersApiV1FolderGetData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/folder/';
+};
+
+export type ListFoldersApiV1FolderGetErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListFoldersApiV1FolderGetError = ListFoldersApiV1FolderGetErrors[keyof ListFoldersApiV1FolderGetErrors];
+
+export type ListFoldersApiV1FolderGetResponses = {
+    /**
+     * Response List Folders Api V1 Folder  Get
+     *
+     * Successful Response
+     */
+    200: Array<FolderResponse>;
+};
+
+export type ListFoldersApiV1FolderGetResponse = ListFoldersApiV1FolderGetResponses[keyof ListFoldersApiV1FolderGetResponses];
+
+export type CreateFolderApiV1FolderPostData = {
+    body: CreateFolderRequest;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/folder/';
+};
+
+export type CreateFolderApiV1FolderPostErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateFolderApiV1FolderPostError = CreateFolderApiV1FolderPostErrors[keyof CreateFolderApiV1FolderPostErrors];
+
+export type CreateFolderApiV1FolderPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: FolderResponse;
+};
+
+export type CreateFolderApiV1FolderPostResponse = CreateFolderApiV1FolderPostResponses[keyof CreateFolderApiV1FolderPostResponses];
+
+export type DeleteFolderApiV1FolderFolderIdDeleteData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path: {
+        /**
+         * Folder Id
+         */
+        folder_id: number;
+    };
+    query?: never;
+    url: '/api/v1/folder/{folder_id}';
+};
+
+export type DeleteFolderApiV1FolderFolderIdDeleteErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteFolderApiV1FolderFolderIdDeleteError = DeleteFolderApiV1FolderFolderIdDeleteErrors[keyof DeleteFolderApiV1FolderFolderIdDeleteErrors];
+
+export type DeleteFolderApiV1FolderFolderIdDeleteResponses = {
+    /**
+     * Response Delete Folder Api V1 Folder  Folder Id  Delete
+     *
+     * Successful Response
+     */
+    200: {
+        [key: string]: boolean;
+    };
+};
+
+export type DeleteFolderApiV1FolderFolderIdDeleteResponse = DeleteFolderApiV1FolderFolderIdDeleteResponses[keyof DeleteFolderApiV1FolderFolderIdDeleteResponses];
+
+export type RenameFolderApiV1FolderFolderIdPutData = {
+    body: UpdateFolderRequest;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path: {
+        /**
+         * Folder Id
+         */
+        folder_id: number;
+    };
+    query?: never;
+    url: '/api/v1/folder/{folder_id}';
+};
+
+export type RenameFolderApiV1FolderFolderIdPutErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RenameFolderApiV1FolderFolderIdPutError = RenameFolderApiV1FolderFolderIdPutErrors[keyof RenameFolderApiV1FolderFolderIdPutErrors];
+
+export type RenameFolderApiV1FolderFolderIdPutResponses = {
+    /**
+     * Successful Response
+     */
+    200: FolderResponse;
+};
+
+export type RenameFolderApiV1FolderFolderIdPutResponse = RenameFolderApiV1FolderFolderIdPutResponses[keyof RenameFolderApiV1FolderFolderIdPutResponses];
 
 export type SignupApiV1AuthSignupPostData = {
     body: SignupRequest;

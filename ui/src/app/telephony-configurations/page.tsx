@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTelephonyConfigWarnings } from "@/context/TelephonyConfigWarningsContext";
+import { detailFromError } from "@/lib/apiError";
 import { useAuth } from "@/lib/auth";
 
 export default function TelephonyConfigurationsPage() {
@@ -147,7 +148,7 @@ export default function TelephonyConfigurationsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-start justify-between gap-4 mb-6">
           <div>
@@ -181,8 +182,7 @@ export default function TelephonyConfigurationsPage() {
                     ? "1 Telnyx configuration is"
                     : `${telnyxMissingWebhookPublicKeyCount} Telnyx configurations are`}{" "}
                   missing a webhook public key. Without it, Telnyx call status
-                  updates and inbound calls will be rejected starting{" "}
-                  <span className="font-medium">15 May 2026</span>. Copy your
+                  updates and inbound calls are being rejected. Copy your
                   public key from{" "}
                   <span className="whitespace-nowrap">
                     Mission Control Portal → Keys &amp; Credentials → Public Key
@@ -331,15 +331,4 @@ export default function TelephonyConfigurationsPage() {
       </AlertDialog>
     </div>
   );
-}
-
-function detailFromError(err: unknown): string {
-  if (typeof err === "string") return err;
-  const e = err as { detail?: unknown };
-  if (typeof e?.detail === "string") return e.detail;
-  if (Array.isArray(e?.detail) && e.detail.length > 0) {
-    const first = e.detail[0] as { msg?: string };
-    if (first?.msg) return first.msg;
-  }
-  return "Request failed";
 }

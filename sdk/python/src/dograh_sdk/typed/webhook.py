@@ -1,8 +1,8 @@
 """GENERATED — do not edit by hand.
 
 Regenerate with `python -m dograh_sdk.codegen` against the target
-Dograh backend. Source of truth: each node's NodeSpec in the backend's
-`api/services/workflow/node_specs/` directory.
+Dograh backend. Source of truth: the backend's model-backed node-spec
+catalog served from `/api/v1/node-types`.
 """
 
 from __future__ import annotations
@@ -69,7 +69,7 @@ class Webhook(TypedNode):
     Additional HTTP headers to include with the request.
     """
 
-    payload_template: dict[str, Any] = field(default_factory=lambda: {'call_id': '{{workflow_run_id}}', 'first_name': '{{initial_context.first_name}}', 'rsvp': '{{gathered_context.rsvp}}', 'duration': '{{cost_info.call_duration_seconds}}', 'recording_url': '{{recording_url}}', 'transcript_url': '{{transcript_url}}'})
+    payload_template: dict[str, Any] = field(default_factory=lambda: {'call_id': '{{workflow_run_id}}', 'first_name': '{{initial_context.first_name}}', 'rsvp': '{{gathered_context.rsvp}}', 'duration': '{{cost_info.call_duration_seconds}}', 'recording_url': '{{recording_url}}', 'user_recording_url': '{{user_recording_url}}', 'bot_recording_url': '{{bot_recording_url}}', 'transcript_url': '{{transcript_url}}'})
     """
     JSON body of the request. Values are Jinja-rendered against the run
     context — `{{workflow_run_id}}`, `{{gathered_context.foo}}`,

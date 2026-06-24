@@ -5,11 +5,12 @@ from loguru import logger
 from api.db import db_client
 from api.enums import PostHogEvent, WorkflowRunState
 from api.services.campaign.circuit_breaker import circuit_breaker
+from api.services.integrations import IntegrationRuntimeSession
 from api.services.pipecat.audio_config import AudioConfig
-from api.services.pipecat.audio_playback import play_audio, play_audio_loop
+from api.services.pipecat.audio_playback import play_audio_loop
 from api.services.pipecat.in_memory_buffers import (
-    InMemoryAudioBuffer,
     InMemoryLogsBuffer,
+    InMemoryRecordingBuffers,
 )
 from api.services.pipecat.pipeline_metrics_aggregator import PipelineMetricsAggregator
 from api.services.pipecat.tracing_config import get_trace_url
@@ -19,10 +20,8 @@ from api.tasks.arq import enqueue_job
 from api.tasks.function_names import FunctionNames
 from pipecat.frames.frames import (
     Frame,
-    LLMContextFrame,
-    TTSSpeakFrame,
 )
-from pipecat.pipeline.task import PipelineTask
+from pipecat.pipeline.worker import PipelineWorker
 from pipecat.processors.audio.audio_buffer_processor import AudioBufferProcessor
 from pipecat.utils.enums import EndTaskReason
 
@@ -41,11 +40,11 @@ async def _capture_call_event(
             "workflow_run_id": workflow_run_id,
             "workflow_id": workflow_run.workflow_id if workflow_run else None,
             "call_type": workflow_run.mode if workflow_run else None,
-            "call_direction": (workflow_run.initial_context or {}).get(
-                "direction", "outbound"
-            )
-            if workflow_run
-            else None,
+            "call_direction": (
+                (workflow_run.initial_context or {}).get("direction", "outbound")
+                if workflow_run
+                else None
+            ),
         }
         if extra_properties:
             properties.update(extra_properties)
@@ -59,7 +58,7 @@ async def _capture_call_event(
 
 
 def register_event_handlers(
-    task: PipelineTask,
+    task: PipelineWorker,
     transport,
     workflow_run_id: int,
     engine: PipecatEngine,
@@ -68,13 +67,13 @@ def register_event_handlers(
     pipeline_metrics_aggregator: PipelineMetricsAggregator,
     audio_config=AudioConfig,
     pre_call_fetch_task: asyncio.Task | None = None,
-    fetch_recording_audio=None,
     user_provider_id: str | None = None,
+    integration_runtime_sessions: list[IntegrationRuntimeSession] | None = None,
 ):
     """Register all event handlers for transport and task events.
 
     Returns:
-        in_memory_audio_buffer for use by other handlers.
+        In-memory recording buffers for use by other handlers.
     """
     # Initialize in-memory buffers with proper audio configuration
     sample_rate = audio_config.pipeline_sample_rate if audio_config else 16000
@@ -85,7 +84,7 @@ def register_event_handlers(
         f"with sample_rate={sample_rate}Hz, channels={num_channels}"
     )
 
-    in_memory_audio_buffer = InMemoryAudioBuffer(
+    in_memory_audio_buffers = InMemoryRecordingBuffers(
         workflow_run_id=workflow_run_id,
         sample_rate=sample_rate,
         num_channels=num_channels,
@@ -97,20 +96,11 @@ def register_event_handlers(
         "initial_response_triggered": False,
     }
 
-    async def queue_initial_llm_context():
-        # Queue LLMContextFrame after the VoicemailDetector since the detector
-        # gates LLMContextFrames until voicemail detection completes. We also
-        # don't want to trigger the Voicemail LLM with this initial frame.
-        await engine.llm.queue_frame(LLMContextFrame(engine.context))
-
     async def maybe_trigger_initial_response():
         """Start the conversation after both pipeline_started and client_connected events.
 
         If a pre-call fetch is in progress, plays a ringer while waiting for the
         response, then merges the result into the call context before proceeding.
-
-        If the start node has a greeting configured, play it directly via TTS.
-        Otherwise, trigger an LLM generation for the opening message.
         """
         if (
             ready_state["pipeline_started"]
@@ -165,46 +155,11 @@ def register_event_handlers(
             # Set the start node now (after pre-call fetch data is merged)
             # so that render_template() has the complete _call_context_vars.
             await engine.set_node(engine.workflow.start_node_id)
-
-            greeting_info = engine.get_start_greeting()
-            if greeting_info:
-                greeting_type, greeting_value = greeting_info
-                if (
-                    greeting_type == "audio"
-                    and greeting_value
-                    and fetch_recording_audio
-                ):
-                    logger.debug(f"Playing audio greeting recording: {greeting_value}")
-                    result = await fetch_recording_audio(
-                        recording_pk=int(greeting_value)
-                    )
-                    if result:
-                        await play_audio(
-                            result.audio,
-                            sample_rate=audio_config.pipeline_sample_rate or 16000,
-                            queue_frame=transport.output().queue_frame,
-                            transcript=result.transcript,
-                            append_to_context=True,
-                        )
-                    else:
-                        logger.warning(
-                            f"Failed to fetch audio greeting {greeting_value}, "
-                            "falling back to LLM generation"
-                        )
-                        await queue_initial_llm_context()
-                else:
-                    logger.debug("Playing text greeting via TTS")
-                    # append_to_context=True so the assistant aggregator commits
-                    # the greeting to the LLM context once TTS finishes; without
-                    # it the LLM would re-greet on its first generation.
-                    await task.queue_frame(
-                        TTSSpeakFrame(greeting_value, append_to_context=True)
-                    )
-            else:
-                logger.debug(
-                    "Both pipeline_started and client_connected received - triggering initial LLM generation"
-                )
-                await queue_initial_llm_context()
+            await engine.queue_node_opening(
+                node_id=engine.workflow.start_node_id,
+                previous_node_id=None,
+                generate_if_no_greeting=True,
+            )
 
     @transport.event_handler("on_client_connected")
     async def on_client_connected(_transport, _participant):
@@ -229,13 +184,13 @@ def register_event_handlers(
         )
 
     @task.event_handler("on_pipeline_started")
-    async def on_pipeline_started(_task: PipelineTask, _frame: Frame):
+    async def on_pipeline_started(_task: PipelineWorker, _frame: Frame):
         logger.debug("In on_pipeline_started callback handler")
         ready_state["pipeline_started"] = True
         await maybe_trigger_initial_response()
 
     @task.event_handler("on_pipeline_error")
-    async def on_pipeline_error(_task: PipelineTask, frame: Frame):
+    async def on_pipeline_error(_task: PipelineWorker, frame: Frame):
         logger.warning(f"Pipeline error for workflow run {workflow_run_id}: {frame}")
         try:
             workflow_run = await db_client.get_workflow_run_by_id(workflow_run_id)
@@ -263,7 +218,7 @@ def register_event_handlers(
 
     @task.event_handler("on_pipeline_finished")
     async def on_pipeline_finished(
-        task: PipelineTask,
+        task: PipelineWorker,
         _frame: Frame,
     ):
         logger.debug(f"In on_pipeline_finished callback handler")
@@ -319,6 +274,20 @@ def register_event_handlers(
                 )
 
         # Clean up engine resources (including voicemail detector)
+        integration_logs: dict[str, object] = {}
+        for runtime_session in integration_runtime_sessions or []:
+            try:
+                session_logs = await runtime_session.on_call_finished(
+                    gathered_context=gathered_context
+                )
+                if session_logs:
+                    integration_logs.update(session_logs)
+            except Exception as e:
+                logger.error(
+                    f"Error finalizing integration runtime session '{runtime_session.name}': {e}",
+                    exc_info=True,
+                )
+
         await engine.cleanup()
 
         # ------------------------------------------------------------------
@@ -368,14 +337,11 @@ def register_event_handlers(
             )
         )
 
-        # Save real-time feedback logs to workflow run
+        logs_update: dict[str, object] = {}
         if not in_memory_logs_buffer.is_empty:
             try:
                 feedback_events = in_memory_logs_buffer.get_events()
-                await db_client.update_workflow_run(
-                    run_id=workflow_run_id,
-                    logs={"realtime_feedback_events": feedback_events},
-                )
+                logs_update["realtime_feedback_events"] = feedback_events
                 logger.debug(
                     f"Saved {len(feedback_events)} feedback events to workflow run logs"
                 )
@@ -384,15 +350,44 @@ def register_event_handlers(
         else:
             logger.debug("Logs buffer is empty, skipping save")
 
+        logs_update.update(integration_logs)
+
+        if logs_update:
+            try:
+                await db_client.update_workflow_run(
+                    run_id=workflow_run_id,
+                    logs=logs_update,
+                )
+            except Exception as e:
+                logger.error(f"Error saving workflow run logs: {e}", exc_info=True)
+
         # Write buffers to temp files and enqueue combined processing task
         audio_temp_path = None
+        user_audio_temp_path = None
+        bot_audio_temp_path = None
         transcript_temp_path = None
 
         try:
-            if not in_memory_audio_buffer.is_empty:
-                audio_temp_path = await in_memory_audio_buffer.write_to_temp_file()
+            if not in_memory_audio_buffers.mixed.is_empty:
+                audio_temp_path = (
+                    await in_memory_audio_buffers.mixed.write_to_temp_file()
+                )
             else:
                 logger.debug("Audio buffer is empty, skipping upload")
+
+            if not in_memory_audio_buffers.user.is_empty:
+                user_audio_temp_path = (
+                    await in_memory_audio_buffers.user.write_to_temp_file()
+                )
+            else:
+                logger.debug("User audio buffer is empty, skipping upload")
+
+            if not in_memory_audio_buffers.bot.is_empty:
+                bot_audio_temp_path = (
+                    await in_memory_audio_buffers.bot.write_to_temp_file()
+                )
+            else:
+                logger.debug("Bot audio buffer is empty, skipping upload")
 
             transcript_temp_path = in_memory_logs_buffer.write_transcript_to_temp_file()
             if not transcript_temp_path:
@@ -408,16 +403,18 @@ def register_event_handlers(
             workflow_run_id,
             audio_temp_path,
             transcript_temp_path,
+            user_audio_temp_path,
+            bot_audio_temp_path,
         )
 
     # Return the buffer so it can be passed to other handlers
-    return in_memory_audio_buffer
+    return in_memory_audio_buffers
 
 
 def register_audio_data_handler(
     audio_buffer: AudioBufferProcessor,
     workflow_run_id,
-    in_memory_buffer: InMemoryAudioBuffer,
+    in_memory_buffers: InMemoryRecordingBuffers,
 ):
     """Register event handler for audio data"""
     logger.info(f"Registering audio data handler for workflow run {workflow_run_id}")
@@ -427,9 +424,19 @@ def register_audio_data_handler(
         if not audio:
             return
 
-        # Use in-memory buffer
         try:
-            await in_memory_buffer.append(audio)
+            await in_memory_buffers.mixed.append(audio)
         except MemoryError as e:
-            logger.error(f"Memory buffer full: {e}")
-            # Could implement overflow to disk here if needed
+            logger.error(f"Mixed audio buffer full: {e}")
+
+    @audio_buffer.event_handler("on_track_audio_data")
+    async def on_track_audio_data(
+        buffer, user_audio, bot_audio, sample_rate, num_channels
+    ):
+        try:
+            if user_audio:
+                await in_memory_buffers.user.append(user_audio)
+            if bot_audio:
+                await in_memory_buffers.bot.append(bot_audio)
+        except MemoryError as e:
+            logger.error(f"Track audio buffer full: {e}")

@@ -9,6 +9,7 @@ from pipecat.frames.frames import (
     LLMContextFrame,
     LLMFullResponseEndFrame,
     LLMFullResponseStartFrame,
+    UserTurnInferenceCompletedFrame,
 )
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.processors.aggregators.llm_context import LLMContext
@@ -45,6 +46,7 @@ class TestUnregisteredFunctionCall:
             expected_down_frames=[
                 LLMFullResponseStartFrame,
                 FunctionCallsFromLLMInfoFrame,
+                UserTurnInferenceCompletedFrame,
                 FunctionCallsStartedFrame,
                 LLMFullResponseEndFrame,
                 FunctionCallInProgressFrame,
@@ -66,7 +68,7 @@ class TestUnregisteredFunctionCall:
 
         # Pipecat's missing-function handler returns a string error.
         assert isinstance(result_frame.result, str)
-        assert "not registered" in result_frame.result
+        assert "not currently available" in result_frame.result
         assert "nonexistent_tool" in result_frame.result
 
         # In-progress frame should also be emitted before the result so mute

@@ -50,8 +50,8 @@ if [[ "${ENABLE_COTURN:-false}" == "true" ]]; then
     # Pick a TURN_HOST that's reachable from BOTH the browser (running on the
     # host) and the API container (running in docker). 127.0.0.1 is tempting
     # but doesn't work for the api container — its own loopback isn't where
-    # coturn lives, so aiortc can't allocate a relay and FORCE_TURN_RELAY
-    # ends up with an empty answer SDP. The host's LAN IP works for both.
+    # coturn lives, so aiortc can't allocate a relay. The host's LAN IP works
+    # for both.
     detect_lan_ip() {
         local ip=""
         if command -v ipconfig >/dev/null 2>&1; then
@@ -68,6 +68,8 @@ if [[ "${ENABLE_COTURN:-false}" == "true" ]]; then
             ip=$(hostname -I 2>/dev/null | awk '{print $1}')
             [[ -n "$ip" ]] && { echo "$ip"; return; }
         fi
+
+        return 0
     }
 
     DEFAULT_TURN_HOST="$(detect_lan_ip)"
@@ -100,6 +102,8 @@ if [[ "${ENABLE_COTURN:-false}" == "true" ]]; then
     fi
 fi
 
+FORCE_TURN_RELAY="${FORCE_TURN_RELAY:-false}"
+
 # Telemetry opt-out (default: true)
 ENABLE_TELEMETRY="${ENABLE_TELEMETRY:-true}"
 
@@ -112,6 +116,7 @@ echo -e "  Coturn:        ${BLUE}${ENABLE_COTURN:-false}${NC}"
 if [[ "${ENABLE_COTURN:-false}" == "true" ]]; then
     echo -e "  TURN Host:     ${BLUE}$TURN_HOST${NC}"
     echo -e "  TURN Secret:   ${BLUE}********${NC}"
+    echo -e "  Force relay:   ${BLUE}$FORCE_TURN_RELAY${NC}"
 fi
 echo -e "  Telemetry:     ${BLUE}$ENABLE_TELEMETRY${NC}"
 echo -e "  Registry:      ${BLUE}$REGISTRY${NC}"
@@ -145,6 +150,10 @@ fi
 ENV_STEP=$TOTAL_STEPS
 echo -e "${BLUE}[$ENV_STEP/$TOTAL_STEPS] Creating environment file...${NC}"
 OSS_JWT_SECRET=$(openssl rand -hex 32)
+POSTGRES_PASSWORD=$(openssl rand -hex 32)
+REDIS_PASSWORD=$(openssl rand -hex 32)
+MINIO_ROOT_USER="dograh$(openssl rand -hex 6)"
+MINIO_ROOT_PASSWORD=$(openssl rand -hex 32)
 
 cat > .env << ENV_EOF
 # Container registry for Dograh images
@@ -153,8 +162,26 @@ REGISTRY=$REGISTRY
 # JWT secret for OSS authentication
 OSS_JWT_SECRET=$OSS_JWT_SECRET
 
+# PostgreSQL password. Used by the postgres container on first init and by the
+# API's DATABASE_URL. Do not change after the first start — the password is
+# baked into the postgres data volume when it is first created.
+POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+
+# Redis password. Used by the redis container's --requirepass and the API's
+# REDIS_URL. This can be rotated by updating .env and recreating the redis
+# container.
+REDIS_PASSWORD=$REDIS_PASSWORD
+
+# MinIO root credentials. Used by the MinIO container and the API's
+# MINIO_ACCESS_KEY / MINIO_SECRET_KEY.
+MINIO_ROOT_USER=$MINIO_ROOT_USER
+MINIO_ROOT_PASSWORD=$MINIO_ROOT_PASSWORD
+
 # Telemetry (set to false to disable)
 ENABLE_TELEMETRY=$ENABLE_TELEMETRY
+
+# Relay-only ICE candidates for explicit TURN diagnostics
+FORCE_TURN_RELAY=$FORCE_TURN_RELAY
 ENV_EOF
 
 if [[ "${ENABLE_COTURN:-false}" == "true" ]]; then

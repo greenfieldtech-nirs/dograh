@@ -6,9 +6,8 @@ from api.routes.agent_stream import router as agent_stream_router
 from api.routes.auth import router as auth_router
 from api.routes.campaign import router as campaign_router
 from api.routes.credentials import router as credentials_router
-from api.routes.integration import router as integration_router
+from api.routes.folder import router as folder_router
 from api.routes.knowledge_base import router as knowledge_base_router
-from api.routes.looptalk import router as looptalk_router
 from api.routes.node_types import router as node_types_router
 from api.routes.organization import router as organization_router
 from api.routes.organization_usage import router as organization_usage_router
@@ -27,6 +26,8 @@ from api.routes.webrtc_signaling import router as webrtc_signaling_router
 from api.routes.workflow import router as workflow_router
 from api.routes.workflow_embed import router as workflow_embed_router
 from api.routes.workflow_recording import router as workflow_recording_router
+from api.routes.workflow_text_chat import router as workflow_text_chat_router
+from api.services.integrations import all_routers
 
 router = APIRouter(
     tags=["main"],
@@ -36,15 +37,14 @@ router = APIRouter(
 router.include_router(telephony_router)
 router.include_router(superuser_router)
 router.include_router(workflow_router)
+router.include_router(workflow_text_chat_router)
 router.include_router(user_router)
 router.include_router(campaign_router)
 router.include_router(credentials_router)
 router.include_router(tool_router)
-router.include_router(integration_router)
 router.include_router(organization_router)
 router.include_router(s3_router)
 router.include_router(service_keys_router)
-router.include_router(looptalk_router)
 router.include_router(organization_usage_router)
 router.include_router(reports_router)
 router.include_router(webrtc_signaling_router)
@@ -55,9 +55,13 @@ router.include_router(public_download_router)
 router.include_router(workflow_embed_router)
 router.include_router(knowledge_base_router)
 router.include_router(workflow_recording_router)
+router.include_router(folder_router)
 router.include_router(auth_router)
 router.include_router(node_types_router)
 router.include_router(agent_stream_router)
+
+for _integration_router in all_routers():
+    router.include_router(_integration_router)
 
 
 class HealthResponse(BaseModel):
@@ -68,6 +72,11 @@ class HealthResponse(BaseModel):
     auth_provider: str
     turn_enabled: bool
     force_turn_relay: bool
+    # Public Stack Auth client config — only populated when auth_provider == "stack".
+    # The UI reads these at runtime to initialize Stack, so they no longer need to
+    # be baked into the browser bundle at build time. Both are public values.
+    stack_project_id: str | None = None
+    stack_publishable_client_key: str | None = None
 
 
 @router.get("/health", response_model=HealthResponse)
@@ -77,12 +86,15 @@ async def health() -> HealthResponse:
         AUTH_PROVIDER,
         DEPLOYMENT_MODE,
         FORCE_TURN_RELAY,
+        STACK_AUTH_PROJECT_ID,
+        STACK_PUBLISHABLE_CLIENT_KEY,
         TURN_SECRET,
     )
     from api.utils.common import get_backend_endpoints
 
     logger.debug("Health endpoint called")
     backend_endpoint, _ = await get_backend_endpoints()
+    is_stack = AUTH_PROVIDER == "stack"
     return HealthResponse(
         status="ok",
         version=APP_VERSION,
@@ -91,4 +103,8 @@ async def health() -> HealthResponse:
         auth_provider=AUTH_PROVIDER,
         turn_enabled=bool(TURN_SECRET),
         force_turn_relay=FORCE_TURN_RELAY,
+        stack_project_id=STACK_AUTH_PROJECT_ID if is_stack else None,
+        stack_publishable_client_key=(
+            STACK_PUBLISHABLE_CLIENT_KEY if is_stack else None
+        ),
     )

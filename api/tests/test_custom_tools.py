@@ -21,6 +21,7 @@ from pipecat.frames.frames import (
     LLMContextFrame,
     LLMFullResponseEndFrame,
     LLMFullResponseStartFrame,
+    UserTurnInferenceCompletedFrame,
 )
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.processors.aggregators.llm_context import LLMContext
@@ -28,6 +29,7 @@ from pipecat.services.llm_service import FunctionCallParams
 
 from api.services.workflow.pipecat_engine_custom_tools import get_function_schema
 from api.services.workflow.tools.custom_tool import (
+    _coerce_parameter_value,
     execute_http_tool,
     tool_to_function_schema,
 )
@@ -139,6 +141,90 @@ class TestToolToFunctionSchema:
         assert "customer_name" in required
         assert "duration_minutes" in required
         assert "is_priority" not in required
+
+    def test_tool_with_object_and_array_parameters(self):
+        """Test converting a tool with object and array parameters."""
+        tool = MockToolModel(
+            tool_uuid="test-uuid-nested",
+            name="Create Booking",
+            description="Create a booking with nested details",
+            category="http_api",
+            definition={
+                "schema_version": 1,
+                "type": "http_api",
+                "config": {
+                    "method": "POST",
+                    "url": "https://api.example.com/bookings",
+                    "parameters": [
+                        {
+                            "name": "booking",
+                            "type": "object",
+                            "description": "Nested booking payload",
+                            "required": True,
+                        },
+                        {
+                            "name": "attendees",
+                            "type": "array",
+                            "description": "Booking attendees",
+                            "required": False,
+                        },
+                    ],
+                },
+            },
+        )
+
+        schema = tool_to_function_schema(tool)
+
+        props = schema["function"]["parameters"]["properties"]
+        assert props["booking"] == {
+            "type": "object",
+            "additionalProperties": True,
+            "description": "Nested booking payload",
+        }
+        assert props["attendees"] == {
+            "type": "array",
+            "items": {},
+            "description": "Booking attendees",
+        }
+
+    def test_preset_parameters_are_not_exposed_to_llm_schema(self):
+        """Test that preset parameters are injected at runtime, not shown to the LLM."""
+        tool = MockToolModel(
+            tool_uuid="test-uuid-preset",
+            name="Lookup Customer",
+            description="Lookup a customer using contextual identifiers",
+            category="http_api",
+            definition={
+                "schema_version": 1,
+                "type": "http_api",
+                "config": {
+                    "method": "POST",
+                    "url": "https://api.example.com/customers/lookup",
+                    "parameters": [
+                        {
+                            "name": "customer_name",
+                            "type": "string",
+                            "description": "Customer name spoken by the caller",
+                            "required": True,
+                        }
+                    ],
+                    "preset_parameters": [
+                        {
+                            "name": "phone_number",
+                            "type": "string",
+                            "value_template": "{{initial_context.phone_number}}",
+                            "required": True,
+                        }
+                    ],
+                },
+            },
+        )
+
+        schema = tool_to_function_schema(tool)
+        props = schema["function"]["parameters"]["properties"]
+
+        assert "customer_name" in props
+        assert "phone_number" not in props
 
     def test_tool_name_sanitization(self):
         """Test that tool names with special characters are sanitized."""
@@ -256,6 +342,153 @@ class TestExecuteHttpTool:
             assert result["data"]["id"] == 123
 
     @pytest.mark.asyncio
+    async def test_post_request_sends_nested_json_body(self):
+        """Test that POST requests preserve nested arguments in the JSON body."""
+        tool = MockToolModel(
+            tool_uuid="test-uuid-nested",
+            name="Create Booking",
+            description="Create a nested booking",
+            category="http_api",
+            definition={
+                "schema_version": 1,
+                "type": "http_api",
+                "config": {
+                    "method": "POST",
+                    "url": "https://api.example.com/bookings",
+                    "timeout_ms": 5000,
+                },
+            },
+        )
+
+        arguments = {
+            "booking": {
+                "start": "2026-05-28T10:00:00Z",
+                "attendee": {"name": "Jane", "email": "jane@example.com"},
+                "metadata": {"source": "voice"},
+            }
+        }
+
+        with patch(
+            "api.services.workflow.tools.custom_tool.httpx.AsyncClient"
+        ) as mock_client_class:
+            mock_client = AsyncMock()
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = {"bookingId": "booking-123"}
+            mock_client.request.return_value = mock_response
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+
+            result = await execute_http_tool(tool, arguments)
+
+            call_kwargs = mock_client.request.call_args.kwargs
+            assert call_kwargs["json"] == arguments
+            assert isinstance(call_kwargs["json"]["booking"], dict)
+            assert isinstance(call_kwargs["json"]["booking"]["attendee"], dict)
+            assert result["status"] == "success"
+
+    @pytest.mark.asyncio
+    async def test_post_request_injects_preset_parameters(self):
+        """Test that preset parameters are resolved from runtime context."""
+        tool = MockToolModel(
+            tool_uuid="test-uuid-preset",
+            name="Create Lead",
+            description="Create a lead with caller context",
+            category="http_api",
+            definition={
+                "schema_version": 1,
+                "type": "http_api",
+                "config": {
+                    "method": "POST",
+                    "url": "https://api.example.com/leads",
+                    "timeout_ms": 5000,
+                    "preset_parameters": [
+                        {
+                            "name": "phone_number",
+                            "type": "string",
+                            "value_template": "{{initial_context.phone_number}}",
+                            "required": True,
+                        },
+                        {
+                            "name": "customer_id",
+                            "type": "number",
+                            "value_template": "{{gathered_context.customer_id}}",
+                            "required": True,
+                        },
+                        {
+                            "name": "is_vip",
+                            "type": "boolean",
+                            "value_template": "{{initial_context.is_vip}}",
+                            "required": False,
+                        },
+                    ],
+                },
+            },
+        )
+
+        arguments = {"name": "John"}
+
+        with patch(
+            "api.services.workflow.tools.custom_tool.httpx.AsyncClient"
+        ) as mock_client_class:
+            mock_client = AsyncMock()
+            mock_response = Mock()
+            mock_response.status_code = 201
+            mock_response.json.return_value = {"id": 123}
+            mock_client.request.return_value = mock_response
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+
+            result = await execute_http_tool(
+                tool,
+                arguments,
+                call_context_vars={
+                    "phone_number": "+14155550123",
+                    "is_vip": "true",
+                },
+                gathered_context_vars={"customer_id": "42"},
+            )
+
+            call_kwargs = mock_client.request.call_args.kwargs
+            assert call_kwargs["json"] == {
+                "name": "John",
+                "phone_number": "+14155550123",
+                "customer_id": 42,
+                "is_vip": True,
+            }
+            assert result["status"] == "success"
+
+    @pytest.mark.asyncio
+    async def test_missing_required_preset_parameter_returns_error(self):
+        """Test that required preset parameters fail before the HTTP request."""
+        tool = MockToolModel(
+            tool_uuid="test-uuid-preset-error",
+            name="Create Lead",
+            description="Create a lead with caller context",
+            category="http_api",
+            definition={
+                "schema_version": 1,
+                "type": "http_api",
+                "config": {
+                    "method": "POST",
+                    "url": "https://api.example.com/leads",
+                    "timeout_ms": 5000,
+                    "preset_parameters": [
+                        {
+                            "name": "phone_number",
+                            "type": "string",
+                            "value_template": "{{initial_context.phone_number}}",
+                            "required": True,
+                        }
+                    ],
+                },
+            },
+        )
+
+        result = await execute_http_tool(tool, {"name": "John"}, call_context_vars={})
+
+        assert result["status"] == "error"
+        assert "phone_number" in result["error"]
+
+    @pytest.mark.asyncio
     async def test_get_request_sends_query_params(self):
         """Test that GET requests send arguments as query parameters."""
         tool = MockToolModel(
@@ -327,7 +560,7 @@ class TestExecuteHttpTool:
             mock_client.request.return_value = mock_response
             mock_client_class.return_value.__aenter__.return_value = mock_client
 
-            result = await execute_http_tool(tool, arguments)
+            await execute_http_tool(tool, arguments)
 
             call_kwargs = mock_client.request.call_args.kwargs
             assert call_kwargs["method"] == "DELETE"
@@ -498,6 +731,51 @@ class TestExecuteHttpTool:
                 mock_db.get_credential_by_uuid.assert_not_called()
 
 
+class TestCoerceParameterValue:
+    """Tests for _coerce_parameter_value function."""
+
+    def test_object_value_returns_dict_unchanged(self):
+        """Test that object parameters preserve dict values."""
+        value = {"attendee": {"name": "Jane"}}
+
+        assert _coerce_parameter_value(value, "object") is value
+
+    def test_object_value_parses_json_string(self):
+        """Test that object parameters parse JSON string values."""
+        value = '{"attendee": {"name": "Jane"}}'
+
+        assert _coerce_parameter_value(value, "object") == {
+            "attendee": {"name": "Jane"}
+        }
+
+    def test_array_value_returns_list_unchanged(self):
+        """Test that array parameters preserve list values."""
+        value = [{"name": "Jane"}, {"name": "Sam"}]
+
+        assert _coerce_parameter_value(value, "array") is value
+
+    def test_array_value_parses_json_string(self):
+        """Test that array parameters parse JSON string values."""
+        value = '[{"name": "Jane"}, {"name": "Sam"}]'
+
+        assert _coerce_parameter_value(value, "array") == [
+            {"name": "Jane"},
+            {"name": "Sam"},
+        ]
+
+    @pytest.mark.parametrize("value", ["not json", "[]", "null"])
+    def test_object_value_rejects_invalid_or_wrong_shape(self, value):
+        """Test that object parameters require a JSON object."""
+        with pytest.raises(ValueError, match="Cannot convert"):
+            _coerce_parameter_value(value, "object")
+
+    @pytest.mark.parametrize("value", ["not json", "{}", "null"])
+    def test_array_value_rejects_invalid_or_wrong_shape(self, value):
+        """Test that array parameters require a JSON array."""
+        with pytest.raises(ValueError, match="Cannot convert"):
+            _coerce_parameter_value(value, "array")
+
+
 class TestAuthHeaders:
     """Tests for auth header building utilities."""
 
@@ -652,6 +930,7 @@ class TestCustomToolManagerIntegration:
             expected_down_frames=[
                 LLMFullResponseStartFrame,
                 FunctionCallsFromLLMInfoFrame,
+                UserTurnInferenceCompletedFrame,
                 FunctionCallsStartedFrame,
                 LLMFullResponseEndFrame,
                 FunctionCallInProgressFrame,
@@ -794,9 +1073,11 @@ class TestCustomToolManagerUnit:
         # Create a mock engine with a mock LLM
         mock_llm = Mock()
         registered_handlers = {}
+        registered_kwargs = {}
 
         def capture_register(name, handler, **kwargs):
             registered_handlers[name] = handler
+            registered_kwargs[name] = kwargs
 
         mock_llm.register_function = capture_register
 
@@ -845,6 +1126,7 @@ class TestCustomToolManagerUnit:
 
             # Verify handler was registered
             assert "api_call" in registered_handlers
+            assert registered_kwargs["api_call"]["timeout_secs"] == pytest.approx(5)
 
         # Now test that the handler works
         handler = registered_handlers["api_call"]

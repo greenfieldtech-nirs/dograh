@@ -167,6 +167,7 @@ if ([string]::IsNullOrEmpty($env:ENABLE_COTURN)) {
 $UseCoturn = Test-IsEnabled $EnableCoturn
 $TurnHost = $env:TURN_HOST
 $TurnSecret = $env:TURN_SECRET
+$ForceTurnRelay = if ([string]::IsNullOrEmpty($env:FORCE_TURN_RELAY)) { 'false' } else { $env:FORCE_TURN_RELAY }
 
 if ($UseCoturn) {
     $defaultTurnHost = Get-DefaultLanIPv4
@@ -208,6 +209,7 @@ Write-Host "  Coturn:        $EnableCoturn" -ForegroundColor Blue
 if ($UseCoturn) {
     Write-Host "  TURN Host:     $TurnHost" -ForegroundColor Blue
     Write-Host '  TURN Secret:   ********' -ForegroundColor Blue
+    Write-Host "  Force relay:   $ForceTurnRelay" -ForegroundColor Blue
 }
 Write-Host "  Telemetry:     $EnableTelemetry" -ForegroundColor Blue
 Write-Host "  Registry:      $Registry" -ForegroundColor Blue
@@ -241,6 +243,10 @@ if ($UseCoturn) {
 
 Write-Info "[2/$TotalSteps] Creating environment file..."
 $ossJwtSecret = New-HexSecret 32
+$postgresPassword = New-HexSecret 32
+$redisPassword = New-HexSecret 32
+$minioRootUser = "dograh$((New-HexSecret 6).Substring(0, 12))"
+$minioRootPassword = New-HexSecret 32
 
 $envLines = @(
     '# Container registry for Dograh images'
@@ -249,8 +255,26 @@ $envLines = @(
     '# JWT secret for OSS authentication'
     "OSS_JWT_SECRET=$ossJwtSecret"
     ''
+    '# PostgreSQL password. Used by the postgres container on first init and by'
+    "# the API's DATABASE_URL. Do not change after the first start — the password"
+    '# is baked into the postgres data volume when it is first created.'
+    "POSTGRES_PASSWORD=$postgresPassword"
+    ''
+    "# Redis password. Used by the redis container's --requirepass and the API's"
+    '# REDIS_URL. This can be rotated by updating .env and recreating the redis'
+    '# container.'
+    "REDIS_PASSWORD=$redisPassword"
+    ''
+    '# MinIO root credentials. Used by the MinIO container and the API''s'
+    '# MINIO_ACCESS_KEY / MINIO_SECRET_KEY.'
+    "MINIO_ROOT_USER=$minioRootUser"
+    "MINIO_ROOT_PASSWORD=$minioRootPassword"
+    ''
     '# Telemetry (set to false to disable)'
     "ENABLE_TELEMETRY=$EnableTelemetry"
+    ''
+    '# Relay-only ICE candidates for explicit TURN diagnostics'
+    "FORCE_TURN_RELAY=$ForceTurnRelay"
 )
 
 if ($UseCoturn) {

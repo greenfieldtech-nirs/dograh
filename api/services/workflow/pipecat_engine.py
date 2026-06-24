@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Awaitable, Callable, Optional, Union
+from typing import TYPE_CHECKING, Awaitable, Callable, Dict, Literal, Optional, Union
 
 from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.frames.frames import (
@@ -7,17 +7,18 @@ from pipecat.frames.frames import (
     CancelFrame,
     EndFrame,
     FunctionCallResultProperties,
+    LLMContextFrame,
     TTSSpeakFrame,
 )
-from pipecat.pipeline.task import PipelineTask
+from pipecat.pipeline.worker import PipelineWorker
 from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.services.llm_service import FunctionCallParams
 from pipecat.services.settings import LLMSettings
 from pipecat.utils.enums import EndTaskReason
 
 from api.db import db_client
+from api.enums import ToolCategory
 from api.services.pipecat.audio_playback import play_audio
-from api.services.workflow.disposition_mapper import apply_disposition_mapping
 from api.services.workflow.workflow_graph import Node, WorkflowGraph
 
 if TYPE_CHECKING:
@@ -33,7 +34,9 @@ import asyncio
 
 from loguru import logger
 
+from api.services.managed_model_services import MPS_CORRELATION_ID_CONTEXT_KEY
 from api.services.workflow import pipecat_engine_callbacks as engine_callbacks
+from api.services.workflow.mcp_tool_session import McpToolSession
 from api.services.workflow.pipecat_engine_context_composer import (
     compose_functions_for_node,
     compose_system_prompt_for_node,
@@ -57,7 +60,7 @@ class PipecatEngine:
     def __init__(
         self,
         *,
-        task: Optional[PipelineTask] = None,
+        task: Optional[PipelineWorker] = None,
         llm: Optional["LLMService"] = None,
         inference_llm: Optional["LLMService"] = None,
         context: Optional[LLMContext] = None,
@@ -70,6 +73,9 @@ class PipecatEngine:
         embeddings_api_key: Optional[str] = None,
         embeddings_model: Optional[str] = None,
         embeddings_base_url: Optional[str] = None,
+        embeddings_provider: Optional[str] = None,
+        embeddings_endpoint: Optional[str] = None,
+        embeddings_api_version: Optional[str] = None,
         has_recordings: bool = False,
         context_compaction_enabled: bool = False,
     ):
@@ -116,10 +122,16 @@ class PipecatEngine:
         # Cached organization ID (resolved lazily from workflow run)
         self._organization_id: Optional[int] = None
 
+        # Open MCP tool sessions for this call, keyed by tool_uuid
+        self._mcp_sessions: Dict[str, McpToolSession] = {}
+
         # Embeddings configuration (passed from run_pipeline.py)
         self._embeddings_api_key: Optional[str] = embeddings_api_key
         self._embeddings_model: Optional[str] = embeddings_model
         self._embeddings_base_url: Optional[str] = embeddings_base_url
+        self._embeddings_provider: Optional[str] = embeddings_provider
+        self._embeddings_endpoint: Optional[str] = embeddings_endpoint
+        self._embeddings_api_version: Optional[str] = embeddings_api_version
 
         # Audio configuration (set via set_audio_config from _run_pipeline)
         self._audio_config = None
@@ -177,6 +189,9 @@ class PipecatEngine:
 
             # Helper that encapsulates custom tool management
             self._custom_tool_manager = CustomToolManager(self)
+
+            # Open persistent MCP server sessions for this call (degrades on failure)
+            await self._open_mcp_sessions()
 
             # Helper that encapsulates context summarization
             if self._context_compaction_enabled:
@@ -364,6 +379,12 @@ class PipecatEngine:
                     embeddings_api_key=self._embeddings_api_key,
                     embeddings_model=self._embeddings_model,
                     embeddings_base_url=self._embeddings_base_url,
+                    embeddings_provider=self._embeddings_provider,
+                    embeddings_endpoint=self._embeddings_endpoint,
+                    embeddings_api_version=self._embeddings_api_version,
+                    correlation_id=self._call_context_vars.get(
+                        MPS_CORRELATION_ID_CONTEXT_KEY
+                    ),
                     tracing_context=self._get_otel_context(),
                 )
 
@@ -503,7 +524,10 @@ class PipecatEngine:
 
         # Register custom tool handlers for this node
         if node.tool_uuids and self._custom_tool_manager:
-            await self._custom_tool_manager.register_handlers(node.tool_uuids)
+            await self._custom_tool_manager.register_handlers(
+                node.tool_uuids,
+                mcp_tool_filters=getattr(node, "mcp_tool_filters", None),
+            )
 
         # Register knowledge base retrieval handler if node has documents
         if node.document_uuids:
@@ -522,14 +546,14 @@ class PipecatEngine:
         )
         await self._update_llm_context(system_prompt, functions)
 
-    async def set_node(self, node_id: str):
+    async def set_node(self, node_id: str, emit_transition_event: bool = True):
         """
         Simplified set_node implementation according to v2 PRD.
         """
         node = self.workflow.nodes[node_id]
 
         logger.debug(
-            f"Executing node: name: {node.name} is_static: {node.is_static} allow_interrupt: {node.allow_interrupt} is_end: {node.is_end}"
+            f"Executing node: name: {node.name} allow_interrupt: {node.allow_interrupt} is_end: {node.is_end}"
         )
 
         # Track previous node for transition event
@@ -545,7 +569,7 @@ class PipecatEngine:
             nodes_visited.append(node.name)
 
         # Send node transition event if callback is provided
-        if self._node_transition_callback:
+        if emit_transition_event and self._node_transition_callback:
             try:
                 await self._node_transition_callback(
                     node_id,
@@ -584,14 +608,11 @@ class PipecatEngine:
             )
             await asyncio.sleep(delay_duration)
 
-        if node.is_static:
-            raise ValueError("Static nodes are not supported!")
-        else:
-            # Setup LLM Context with Prompts and Functions
-            await self._setup_llm_context(node)
+        # Setup LLM context with prompts and functions.
+        await self._setup_llm_context(node)
 
-    def get_start_greeting(self) -> Optional[tuple[str, Optional[str]]]:
-        """Return the greeting info for the start node, or None if not configured.
+    def get_node_greeting(self, node_id: str) -> Optional[tuple[str, Optional[str]]]:
+        """Return the greeting info for a node, or None if not configured.
 
         Returns:
             A tuple of (greeting_type, value) where:
@@ -599,35 +620,102 @@ class PipecatEngine:
             - ("audio", recording_id) for pre-recorded audio greetings
             Or None if no greeting is configured.
         """
-        start_node = self.workflow.nodes.get(self.workflow.start_node_id)
-        if not start_node:
+        node = self.workflow.nodes.get(node_id)
+        if not node:
             return None
 
-        greeting_type = start_node.greeting_type or "text"
+        greeting_type = node.greeting_type or "text"
 
-        if greeting_type == "audio" and start_node.greeting_recording_id:
-            return ("audio", start_node.greeting_recording_id)
+        if greeting_type == "audio" and node.greeting_recording_id:
+            return ("audio", node.greeting_recording_id)
 
-        if start_node.greeting:
-            return ("text", self._format_prompt(start_node.greeting))
+        if node.greeting:
+            return ("text", self._format_prompt(node.greeting))
 
         return None
 
+    def get_start_greeting(self) -> Optional[tuple[str, Optional[str]]]:
+        """Return the greeting info for the start node, or None if not configured."""
+        return self.get_node_greeting(self.workflow.start_node_id)
+
+    async def queue_node_opening(
+        self,
+        *,
+        node_id: str,
+        previous_node_id: Optional[str] = None,
+        generate_if_no_greeting: bool = False,
+    ) -> Literal["none", "greeting", "llm"]:
+        """Queue the opening behavior for a node.
+
+        This is the shared source of truth for how a node begins once the
+        engine is ready and the node has already been set on the context.
+
+        Returns:
+            "greeting" when a text/audio greeting was queued,
+            "llm" when an initial LLM generation was queued,
+            "none" when nothing was queued.
+        """
+        if previous_node_id != node_id:
+            greeting_info = self.get_node_greeting(node_id)
+            if greeting_info:
+                greeting_type, greeting_value = greeting_info
+                if (
+                    greeting_type == "audio"
+                    and greeting_value
+                    and self._fetch_recording_audio
+                    and self._transport_output is not None
+                ):
+                    logger.debug(f"Playing audio greeting recording: {greeting_value}")
+                    result = await self._fetch_recording_audio(
+                        recording_pk=int(greeting_value)
+                    )
+                    if result:
+                        await play_audio(
+                            result.audio,
+                            sample_rate=self._audio_config.pipeline_sample_rate
+                            if self._audio_config
+                            else 16000,
+                            queue_frame=self._transport_output.queue_frame,
+                            transcript=result.transcript,
+                            append_to_context=True,
+                        )
+                        return "greeting"
+                    logger.warning(
+                        f"Failed to fetch audio greeting {greeting_value}, "
+                        "falling back to LLM generation"
+                    )
+                elif greeting_value and self.task is not None:
+                    logger.debug("Playing text greeting via TTS")
+                    # append_to_context=True so the assistant aggregator commits
+                    # the greeting to the LLM context once TTS finishes; without
+                    # it the LLM would re-greet on its first generation.
+                    await self.task.queue_frame(
+                        TTSSpeakFrame(greeting_value, append_to_context=True)
+                    )
+                    return "greeting"
+
+        if (
+            generate_if_no_greeting
+            and self.llm is not None
+            and self.context is not None
+        ):
+            logger.debug("Queueing initial LLM generation for node opening")
+            # Queue after the voicemail detector in the live pipeline so the
+            # detector can gate initial generations when needed.
+            await self.llm.queue_frame(LLMContextFrame(self.context))
+            return "llm"
+
+        return "none"
+
     async def _handle_end_node(self, node: Node) -> None:
         """Handle end node execution."""
-        if node.is_static:
-            raise ValueError("Static nodes are not supported!")
-        else:
-            # Setup LLM Context with Prompts and Functions
-            await self._setup_llm_context(node)
+        # Setup LLM context with prompts and functions.
+        await self._setup_llm_context(node)
 
     async def _handle_agent_node(self, node: Node) -> None:
         """Handle agent node execution."""
-        if node.is_static:
-            raise ValueError("Static nodes are not supported!")
-        else:
-            # Setup LLM Context with Prompts and Functions
-            await self._setup_llm_context(node)
+        # Setup LLM context with prompts and functions.
+        await self._setup_llm_context(node)
 
     async def end_call_with_reason(
         self,
@@ -662,38 +750,21 @@ class PipecatEngine:
             CancelFrame(reason=reason) if abort_immediately else EndFrame(reason=reason)
         )
 
-        # Apply disposition mapping - first try call_disposition if it is,
-        # extracted from the call conversation then fall back to reason
-        call_disposition = self._gathered_context.get("call_disposition", "")
-        organization_id = await self._get_organization_id()
+        # Record the call disposition: prefer one extracted from the conversation,
+        # otherwise fall back to the disconnect reason.
+        call_disposition = self._gathered_context.get("call_disposition", "") or reason
+        self._gathered_context["call_disposition"] = call_disposition
+        self._gathered_context["mapped_call_disposition"] = call_disposition
 
         if call_disposition:
-            # If call_disposition exists, map it
-            mapped_disposition = await apply_disposition_mapping(
-                call_disposition, organization_id
-            )
-            # Store the original and mapped values
-            self._gathered_context["extracted_call_disposition"] = call_disposition
-            self._gathered_context["call_disposition"] = call_disposition
-            self._gathered_context["mapped_call_disposition"] = mapped_disposition
-        else:
-            # Otherwise, map the disconnect reason
-            mapped_disposition = await apply_disposition_mapping(
-                reason, organization_id
-            )
-            # Store the mapped disconnect reason
-            self._gathered_context["call_disposition"] = reason
-            self._gathered_context["mapped_call_disposition"] = mapped_disposition
-
-        effective_disposition = self._gathered_context.get("call_disposition", "")
-        if effective_disposition:
             call_tags = self._gathered_context.get("call_tags", [])
-            if effective_disposition not in call_tags:
-                call_tags.append(effective_disposition)
+            if call_disposition not in call_tags:
+                call_tags.append(call_disposition)
             self._gathered_context["call_tags"] = call_tags
 
         logger.debug(
-            f"Finishing run with reason: {reason}, disposition: {mapped_disposition} queueing frame {frame_to_push}"
+            f"Finishing run with reason: {reason}, disposition: {call_disposition} "
+            f"queueing frame {frame_to_push}"
         )
         await self.task.queue_frame(frame_to_push)
 
@@ -766,7 +837,7 @@ class PipecatEngine:
         """
         self.context = context
 
-    def set_task(self, task: PipelineTask) -> None:
+    def set_task(self, task: PipelineWorker) -> None:
         """Set the pipeline task.
 
         This allows setting the task after the engine has been created,
@@ -814,8 +885,96 @@ class PipecatEngine:
         """Get the gathered context including extracted variables."""
         return self._gathered_context.copy()
 
+    async def _open_mcp_sessions(self) -> None:
+        """Connect every MCP-category tool referenced by any workflow node.
+        Failures degrade (session marked unavailable); never raises."""
+        from api.services.workflow.tools.mcp_tool import (
+            McpDefinitionError,
+            validate_mcp_definition,
+        )
+
+        try:
+            tool_uuids: set[str] = set()
+            for node in self.workflow.nodes.values():
+                for tu in getattr(node, "tool_uuids", None) or []:
+                    tool_uuids.add(tu)
+            if not tool_uuids:
+                return
+
+            organization_id = await self._get_organization_id()
+            if not organization_id:
+                logger.warning("Cannot open MCP sessions: organization_id missing")
+                return
+
+            tools = await db_client.get_tools_by_uuids(
+                list(tool_uuids), organization_id
+            )
+            for tool in tools:
+                if tool.category != ToolCategory.MCP.value:
+                    continue
+                try:
+                    cfg = validate_mcp_definition(tool.definition)
+                except McpDefinitionError as e:
+                    logger.warning(
+                        f"Skipping MCP tool '{tool.name}' ({tool.tool_uuid}): "
+                        f"invalid definition: {e}"
+                    )
+                    continue
+
+                credential = None
+                if cfg["credential_uuid"]:
+                    try:
+                        credential = await db_client.get_credential_by_uuid(
+                            cfg["credential_uuid"], organization_id
+                        )
+                    except Exception as e:
+                        logger.warning(
+                            f"MCP tool '{tool.name}': credential fetch failed: {e}"
+                        )
+                        continue
+
+                session = McpToolSession(
+                    tool_uuid=tool.tool_uuid,
+                    tool_name=tool.name,
+                    url=cfg["url"],
+                    credential=credential,
+                    tools_filter=cfg["tools_filter"],
+                    timeout_secs=cfg["timeout_secs"],
+                    sse_read_timeout_secs=cfg["sse_read_timeout_secs"],
+                )
+                await session.start()
+                self._mcp_sessions[tool.tool_uuid] = session
+        except Exception as e:
+            logger.warning(
+                f"Failed to open MCP sessions; call proceeds without MCP tools: {e}",
+                exc_info=True,
+            )
+
+    async def close_mcp_sessions(self) -> None:
+        """Close all open MCP tool sessions.
+
+        Must run in the same task that ran initialize() (which opened the
+        sessions via _open_mcp_sessions). The MCP client's underlying anyio
+        cancel scopes are task-affine — they must be exited from the task that
+        entered them — so this is invoked from _run_pipeline's finally, not
+        from cleanup() (which runs in a pipecat event-handler task).
+        """
+        for tool_uuid, session in list(self._mcp_sessions.items()):
+            try:
+                await session.close()
+            except Exception as e:
+                logger.warning(f"Error closing MCP session {tool_uuid}: {e}")
+        self._mcp_sessions = {}
+
     async def cleanup(self):
-        """Clean up engine resources on disconnect."""
+        """Clean up engine resources on disconnect.
+
+        MCP tool sessions are intentionally NOT closed here — see
+        close_mcp_sessions(). This method runs in a pipecat event-handler task
+        (on_pipeline_finished), a different task than the one that opened the
+        MCP sessions; closing them here raises "Attempted to exit cancel scope
+        in a different task than it was entered in".
+        """
         # Cancel any pending timeout tasks
         if (
             self._user_response_timeout_task
@@ -823,6 +982,6 @@ class PipecatEngine:
         ):
             self._user_response_timeout_task.cancel()
 
-        # Cancel any in-flight background summarization
+        # Cancel any in-flight background summarization.
         if self._context_summarization_manager:
             await self._context_summarization_manager.cleanup()

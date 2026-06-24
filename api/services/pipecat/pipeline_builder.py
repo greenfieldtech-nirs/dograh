@@ -4,7 +4,7 @@ from loguru import logger
 
 from api.services.pipecat.audio_config import AudioConfig
 from pipecat.pipeline.pipeline import Pipeline
-from pipecat.pipeline.task import PipelineParams, PipelineTask
+from pipecat.pipeline.worker import PipelineParams, PipelineWorker
 from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.processors.audio.audio_buffer_processor import AudioBufferProcessor
 from pipecat.utils.run_context import turn_var
@@ -152,8 +152,30 @@ def build_realtime_pipeline(
     return Pipeline(processors)
 
 
-def create_pipeline_task(pipeline, workflow_run_id, audio_config: AudioConfig = None):
-    """Create a pipeline task with appropriate parameters"""
+def create_pipeline_task(
+    pipeline,
+    workflow_run_id,
+    audio_config: AudioConfig = None,
+    *,
+    conversation_parent_context=None,
+    conversation_type: str = "voice",
+    additional_span_attributes: dict | None = None,
+):
+    """Create a pipeline task with appropriate parameters.
+
+    Args:
+        pipeline: The pipeline to run.
+        workflow_run_id: Run id, used as the conversation id.
+        audio_config: Optional audio configuration.
+        conversation_parent_context: Optional OTEL context carrying a fixed
+            trace id. When provided, the conversation span attaches to that
+            trace instead of starting a new root trace (used by text chat to
+            stitch every per-turn pipeline into one trace).
+        conversation_type: ``conversation.type`` span attribute value.
+        additional_span_attributes: Extra attributes set on the conversation
+            span (e.g. ``langfuse.trace.name`` to name a stitched trace that
+            has no real root span).
+    """
     # Set up pipeline params with audio configuration if provided
     pipeline_params = PipelineParams(
         enable_metrics=True,
@@ -172,12 +194,15 @@ def create_pipeline_task(pipeline, workflow_run_id, audio_config: AudioConfig = 
             f"out: {audio_config.transport_out_sample_rate}Hz"
         )
 
-    task = PipelineTask(
+    task = PipelineWorker(
         pipeline,
         params=pipeline_params,
         enable_tracing=True,
         enable_rtvi=False,
         conversation_id=f"{workflow_run_id}",
+        conversation_parent_context=conversation_parent_context,
+        conversation_type=conversation_type,
+        additional_span_attributes=additional_span_attributes,
     )
 
     # Check if turn logging is enabled

@@ -4,7 +4,8 @@ from typing import Dict, List, Set
 
 from api.services.workflow.dto import EdgeDataDTO, NodeType, ReactFlowDTO
 from api.services.workflow.errors import ItemKind, WorkflowError
-from api.services.workflow.node_specs import REGISTRY
+from api.services.workflow.node_data import BaseNodeData
+from api.services.workflow.node_specs import all_specs, get_spec
 
 # Regex for matching {{ variable }} template placeholders.
 # Captures: group(1) = variable path, group(2) = filter name, group(3) = filter value.
@@ -62,20 +63,20 @@ class Edge:
 
 
 class Node:
-    def __init__(self, id: str, node_type: NodeType, data):
+    def __init__(self, id: str, node_type: str, data: BaseNodeData):
         self.id, self.node_type, self.data = id, node_type, data
         self.out: Dict[str, "Node"] = {}  # forward nodes
         self.out_edges: List[Edge] = []  # forward edges with properties
 
-        # name/is_start/is_end live on every per-type data class (base).
+        # Start/end semantics are defined by node type. The persisted
+        # data flags are legacy UI/runtime state and may be stale.
         self.name = data.name
-        self.is_start = data.is_start
-        self.is_end = data.is_end
+        self.is_start = node_type == NodeType.startNode.value
+        self.is_end = node_type == NodeType.endNode.value
 
         # Type-specific fields — read with getattr so this works for every
         # node variant in the discriminated union.
         self.prompt = getattr(data, "prompt", None)
-        self.is_static = getattr(data, "is_static", False)
         self.allow_interrupt = getattr(data, "allow_interrupt", False)
         self.extraction_enabled = getattr(data, "extraction_enabled", False)
         self.extraction_prompt = getattr(data, "extraction_prompt", None)
@@ -84,11 +85,11 @@ class Node:
         self.greeting = getattr(data, "greeting", None)
         self.greeting_type = getattr(data, "greeting_type", None)
         self.greeting_recording_id = getattr(data, "greeting_recording_id", None)
-        self.detect_voicemail = getattr(data, "detect_voicemail", False)
         self.delayed_start = getattr(data, "delayed_start", False)
         self.delayed_start_duration = getattr(data, "delayed_start_duration", None)
         self.tool_uuids = getattr(data, "tool_uuids", None)
         self.document_uuids = getattr(data, "document_uuids", None)
+        self.mcp_tool_filters = getattr(data, "mcp_tool_filters", None)
         self.pre_call_fetch_enabled = getattr(data, "pre_call_fetch_enabled", False)
         self.pre_call_fetch_url = getattr(data, "pre_call_fetch_url", None)
         self.pre_call_fetch_credential_uuid = getattr(
@@ -98,18 +99,94 @@ class Node:
         self.data = data
 
 
+def _instance_constraint_message(
+    label: str,
+    count: int,
+    *,
+    min_count: int | None = None,
+    max_count: int | None = None,
+) -> str:
+    if max_count is not None and count > max_count:
+        if max_count == 1:
+            return f"Workflow can have at most one {label}"
+        return f"Workflow can have at most {max_count} {label} nodes"
+    if min_count is not None and count < min_count:
+        if min_count == 1:
+            return f"Workflow must have at least one {label}"
+        return f"Workflow must have at least {min_count} {label} nodes"
+    return ""
+
+
+def validate_node_instance_constraints(
+    node_types: list[str],
+    *,
+    enforce_min_instances: bool = True,
+    skip_types: Set[str] | None = None,
+) -> list[WorkflowError]:
+    """Validate workflow-level node type counts from NodeSpec.graph_constraints."""
+    errors: list[WorkflowError] = []
+    skip_types = skip_types or set()
+    counts = Counter(node_types)
+
+    for spec in all_specs():
+        if spec.name in skip_types:
+            continue
+        gc = spec.graph_constraints
+        if gc is None:
+            continue
+
+        count = counts.get(spec.name, 0)
+        if gc.max_instances is not None and count > gc.max_instances:
+            errors.append(
+                WorkflowError(
+                    kind=ItemKind.workflow,
+                    id=None,
+                    field=None,
+                    message=_instance_constraint_message(
+                        spec.display_name,
+                        count,
+                        max_count=gc.max_instances,
+                    ),
+                )
+            )
+        if (
+            enforce_min_instances
+            and gc.min_instances is not None
+            and count < gc.min_instances
+        ):
+            errors.append(
+                WorkflowError(
+                    kind=ItemKind.workflow,
+                    id=None,
+                    field=None,
+                    message=_instance_constraint_message(
+                        spec.display_name,
+                        count,
+                        min_count=gc.min_instances,
+                    ),
+                )
+            )
+
+    return errors
+
+
 class WorkflowGraph:
     """
     *All* business invariants (acyclic, cardinality, etc.) are verified here.
     The constructor accepts a validated ReactFlowDTO.
     """
 
-    def __init__(self, dto: ReactFlowDTO):
-        # build adjacency list. n.type comes off the discriminated-union
-        # variant as a literal string; coerce to NodeType for downstream
-        # comparisons.
+    def __init__(
+        self,
+        dto: ReactFlowDTO,
+        *,
+        skip_instance_constraints_for: Set[str] | None = None,
+    ):
+        # Build adjacency list from validated DTO nodes. Core node comparisons
+        # still use NodeType string enums; integration nodes remain plain
+        # strings and resolve constraints through node specs.
         self.nodes: Dict[str, Node] = {
-            n.id: Node(n.id, NodeType(n.type), n.data) for n in dto.nodes
+            n.id: Node(n.id, n.type, n.data) for n in dto.nodes
         }
 
         # Store all edges
@@ -131,15 +208,17 @@ class WorkflowGraph:
             # Set up the node references for backward compatibility
             source_node.out[target_node.id] = target_node
 
-        self._validate_graph()
+        self._validate_graph(skip_instance_constraints_for or set())
 
         # Get a reference to the start node
-        self.start_node_id = [n.id for n in dto.nodes if n.data.is_start][0]
+        self.start_node_id = [
+            n.id for n in dto.nodes if n.type == NodeType.startNode.value
+        ][0]
 
         # Get a reference to the global node
         try:
             self.global_node_id = [
-                n.id for n in dto.nodes if n.type == NodeType.globalNode
+                n.id for n in dto.nodes if n.type == NodeType.globalNode.value
             ][0]
         except IndexError:
             self.global_node_id = None
@@ -185,7 +264,7 @@ class WorkflowGraph:
     # -----------------------------------------------------------
     # validators
     # -----------------------------------------------------------
-    def _validate_graph(self) -> None:
+    def _validate_graph(self, skip_instance_constraints_for: Set[str]) -> None:
         errors: list[WorkflowError] = []
 
         # TODO: Figure out what kind of cyclic contraints can be applied, since there can be a cycle in the graph
@@ -198,9 +277,13 @@ class WorkflowGraph:
         #         )
         #     )
 
-        errors.extend(self._assert_start_node())
+        errors.extend(
+            validate_node_instance_constraints(
+                [n.node_type for n in self.nodes.values()],
+                skip_types=skip_instance_constraints_for,
+            )
+        )
         errors.extend(self._assert_connection_counts())
-        errors.extend(self._assert_global_node())
         errors.extend(self._assert_node_configs())
         if errors:
             raise ValueError(errors)
@@ -219,48 +302,6 @@ class WorkflowGraph:
 
         for n in self.nodes.values():
             dfs(n)
-
-    def _assert_start_node(self):
-        errors: list[WorkflowError] = []
-        start_nodes = [n for n in self.nodes.values() if n.data.is_start]
-        if not start_nodes:
-            errors.append(
-                WorkflowError(
-                    kind=ItemKind.workflow,
-                    id=None,
-                    field=None,
-                    message="Workflow has no start node — exactly one is required",
-                )
-            )
-        elif len(start_nodes) > 1:
-            errors.append(
-                WorkflowError(
-                    kind=ItemKind.workflow,
-                    id=None,
-                    field=None,
-                    message=(
-                        f"Workflow has {len(start_nodes)} start nodes — "
-                        f"exactly one is required"
-                    ),
-                )
-            )
-        return errors
-
-    def _assert_global_node(self):
-        errors: list[WorkflowError] = []
-        global_node = [
-            n for n in self.nodes.values() if n.node_type == NodeType.globalNode
-        ]
-        if not len(global_node) <= 1:
-            errors.append(
-                WorkflowError(
-                    kind=ItemKind.workflow,
-                    id=None,
-                    field=None,
-                    message="Workflow must have at most one global node",
-                )
-            )
-        return errors
 
     def _assert_connection_counts(self):
         """Enforce per-type incoming/outgoing edge constraints.
@@ -281,7 +322,7 @@ class WorkflowGraph:
                 in_deg[m.id] += 1
 
         for n in self.nodes.values():
-            spec = REGISTRY.get(n.node_type.value)
+            spec = get_spec(n.node_type)
             if spec is None or spec.graph_constraints is None:
                 continue
             gc = spec.graph_constraints
